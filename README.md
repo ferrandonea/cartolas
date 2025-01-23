@@ -17,7 +17,7 @@ DEFINIR
 Para iniciar la aplicación, ejecuta:
 
 ```bash
-DEFINIR
+uv run python -m cartolas.download_cartolas
 ```
 
 ## Contribuir
