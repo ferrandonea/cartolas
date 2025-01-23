@@ -68,9 +68,7 @@ def download_cartolas(
     # Aplica la función de formato a las fechas de inicio y fin
     start_date, end_date = map(format_date_cmf, [start_date, end_date])
 
-    if verbose:
-        print("*" * 80)
-        print(f"Descargando cartolas desde {start_date} hasta {end_date}")
+    print(f"Descargando cartolas desde {start_date} hasta {end_date}") if verbose else None
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=headless)
@@ -93,8 +91,7 @@ def download_cartolas(
         
         prediction = predict(temp_file_path)
         
-        if verbose: 
-            print (f"Predicción del captcha: {prediction}")
+        print (f"Predicción del captcha: {prediction}") if verbose else None
         
         if len(prediction) != 6:
             temp_file_path.rename(error_folder / f"{prediction}.png")
@@ -109,28 +106,37 @@ def download_cartolas(
         )
         page.get_by_label("Ingrese los caracteres de la").fill(prediction)        
 
-        try:
-            with page.expect_download() as download_info:
-                page.get_by_role("button", name="GENERAR ARCHIVO").click()
-                download = download_info.value
-                if download:
-                    temp_file_path.rename(correct_folder / f"{prediction}.png")
-                    download_path = cartolas_txt_folder / download.suggested_filename
-                    download.save_as(download_path)
-                    print (f"Archivo descargado como: {download_path}") if verbose else None 
+        fetch_cartola_data(verbose, temp_file_path, error_folder, correct_folder, cartolas_txt_folder, page, prediction) 
+
+def fetch_cartola_data(verbose, temp_file_path, error_folder, correct_folder, cartolas_txt_folder, page, prediction):
+    """ Es la función que hace la baja de la cartola"""
+    try:
+        with page.expect_download() as download_info:
+            page.get_by_role("button", name="GENERAR ARCHIVO").click()
+            download = download_info.value
+            if download:
+                temp_file_path.rename(correct_folder / f"{prediction}.png")
+                download_path = cartolas_txt_folder / download.suggested_filename
+                download.save_as(download_path)
+                print (f"Archivo descargado como: {download_path}") if verbose else None 
                     # ACA FALTA CHEQUEAR EL TAMAÑO
-        except Exception as e:
-            print ("Error en la descarga") if verbose else None
-            print (f"Detalles: {e}") if verbose else None
-            temp_file_path.rename(error_folder / f"{prediction}.png")
-            raise e        
+    except Exception as e:
+        print ("Error en la descarga") if verbose else None
+        print (f"Detalles: {e}") if verbose else None
+        temp_file_path.rename(error_folder / f"{prediction}.png")
+        raise e       
 
             
 if __name__ == "__main__":
     start_date = date(2021, 1, 1)
     end_date = date(2021, 1, 22)
     import time
+    from random import randint
+    sleep = randint(1,5)
+    start = time.perf_counter()
     for _ in range(100):
-        
+        print (f"Iteración {_}") if VERBOSE else None
         download_cartolas(start_date, end_date, headless=True)
-        time.sleep(10)
+        print (f"Esperando {sleep} segundos") if VERBOSE else None
+        time.sleep(sleep)
+    print (f"Tiempo total: {time.perf_counter() - start}") if VERBOSE else None
