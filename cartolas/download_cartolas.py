@@ -132,11 +132,13 @@ if __name__ == "__main__":
     end_date = date(2021, 1, 22)
     import time
     from random import randint
-    sleep = randint(1,5)
+    
     start = time.perf_counter()
-    for _ in range(100):
+    for _ in range(10):
+        sleep = randint(1,5)
+        print ("*"*80) if VERBOSE else None
         print (f"Iteración {_}") if VERBOSE else None
         download_cartolas(start_date, end_date, headless=True)
         print (f"Esperando {sleep} segundos") if VERBOSE else None
         time.sleep(sleep)
-    print (f"Tiempo total: {time.perf_counter() - start}") if VERBOSE else None
+    print (f"Tiempo total: {time.perf_counter() - start:.2f}") if VERBOSE else None
