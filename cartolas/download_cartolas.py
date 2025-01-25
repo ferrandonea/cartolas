@@ -112,7 +112,7 @@ def fetch_cartola_data(verbose, temp_file_path, error_folder, correct_folder, ca
     """ Es la función que hace la baja de la cartola"""
     try:
         with page.expect_download() as download_info:
-            page.get_by_role("button", name="GENERAR ARCHIVO").click()
+            page.get_by_role("button", name="GENERAR ARCHIVO").click(timeout=TIMEOUT)
             download = download_info.value
             if download:
                 temp_file_path.rename(correct_folder / f"{prediction}.png")
@@ -134,8 +134,8 @@ if __name__ == "__main__":
     from random import randint
     
     start = time.perf_counter()
-    for _ in range(10):
-        sleep = randint(1,5)
+    for _ in range(250):
+        sleep = randint(1,10)
         print ("*"*80) if VERBOSE else None
         print (f"Iteración {_}") if VERBOSE else None
         download_cartolas(start_date, end_date, headless=True)
