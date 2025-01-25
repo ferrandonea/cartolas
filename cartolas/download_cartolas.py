@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from captchapass import predict
 from playwright.sync_api import Page, sync_playwright
-from utiles.decorators import retry_function
+from utiles.decorators import retry_function, exp_retry_function
 from utiles.file_tools import generate_hash_image_name
 from typing import Any
 from pathlib import Path
@@ -50,7 +50,7 @@ def format_date_cmf(input_date: date | datetime) -> str:
 def goto_with_retry(page: Page, url_str: str, timeout: int = TIMEOUT) -> Any:
     return page.goto(url_str, timeout=timeout)
 
-
+@exp_retry_function
 @retry_function
 def download_cartolas(
     start_date: date | datetime,
@@ -134,7 +134,8 @@ if __name__ == "__main__":
     from random import randint
     
     start = time.perf_counter()
-    for _ in range(250):
+    corridas = 1_000
+    for _ in range(corridas):
         sleep = randint(1,10)
         print ("*"*80) if VERBOSE else None
         print (f"Iteración {_}") if VERBOSE else None
