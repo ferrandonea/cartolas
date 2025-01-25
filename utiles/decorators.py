@@ -7,7 +7,7 @@ T = TypeVar("T")
 
 
 def retry_function(
-    func: Callable[..., T], max_attempts: int = 10, delay: int = 5
+    func: Callable[..., T], max_attempts: int = 10, delay: int = 10
 ) -> Callable[..., T]:
     """Decorador que intenta ejecutar una función varias veces si hay una excepción"""
 
