@@ -37,6 +37,7 @@ CORRECT_FOLDER = CURRENT_FOLDER / CORRECT_FOLDER_NAME
 CARTOLAS_FOLDER_NAME = "cartolas_txt"
 CARTOLAS_FOLDER = CURRENT_FOLDER / CARTOLAS_FOLDER_NAME
 
+
 @retry_function
 def goto_with_retry(page: Page, url_str: str, timeout: int = TIMEOUT) -> Any:
     return page.goto(url_str, timeout=timeout)
@@ -67,10 +68,10 @@ def download_cartolas(
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=headless)
         page = browser.new_page()
-        
+
         # Alternativamente page.goto(url, timeout=TIMEOUT)
         goto_with_retry(page, url)
-        
+
         captcha_img = page.query_selector("img#captcha_img")
         src = captcha_img.get_attribute("src")
         # Acá usamos JS para obtener una representación de la imagen en bytes
@@ -157,4 +158,3 @@ def main(VERBOSE, download_cartolas):
 
 if __name__ == "__main__":
     main(VERBOSE, download_cartolas)
-
