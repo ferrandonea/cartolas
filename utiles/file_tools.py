@@ -20,7 +20,8 @@ def generate_hash_name(length=HASH_LENGHT):
 
 def generate_hash_image_name(lenght=HASH_LENGHT):
     return generate_hash_name(length=lenght) + ".png"
-    pass
+
+
 
 
 if __name__ == "__main__":
