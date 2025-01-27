@@ -1,4 +1,5 @@
-""" Decoradores """
+"""Decoradores"""
+
 from typing import Callable, TypeVar
 import time
 
@@ -27,6 +28,7 @@ def retry_function(
 
     return wrapper
 
+
 def exp_retry_function(
     func: Callable[..., T], max_attempts: int = 12
 ) -> Callable[..., T]:
@@ -41,7 +43,9 @@ def exp_retry_function(
             except Exception as e:
                 attempts += 1
                 print(f"Error en {func.__name__}: {e}")
-                print(f"Intento {attempts}/{max_attempts}. Esperando {pow(2, attempts)} segundos")
+                print(
+                    f"Intento {attempts}/{max_attempts}. Esperando {pow(2, attempts)} segundos"
+                )
                 time.sleep(pow(2, attempts))
         raise Exception(
             f"No se pudo ejecutar {func.__name__} después de {max_attempts} intentos"
