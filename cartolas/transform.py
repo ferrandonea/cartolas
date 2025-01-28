@@ -51,6 +51,7 @@ def transform_cartola_folder(
 ) -> pl.LazyFrame:
     """Lee todas las cartolas de una carpeta y las concatena en un DataFrame de Polars (lazy)."""
     list_txts = [txt_file for txt_file in cartola_folder.glob(wildcard)]
+    
 
     lazy_df = pl.concat(
         [transform_single_cartola(txt_cartola=txt_file) for txt_file in list_txts]
