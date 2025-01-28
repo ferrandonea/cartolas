@@ -1,60 +1,102 @@
-"""Este módulo se encarga de actualizar las cartolas de la CMF."""
+"""
+Este módulo se encarga de actualizar las cartolas de la CMF.
 
-from datetime import date, timedelta
-from cartolas.config import FECHA_MINIMA, INITIAL_DATE_RANGE, PARQUET_FILE_PATH
-from utiles.fechas import date_range, consecutive_date_ranges
+Contiene funciones para actualizar los datos de las cartolas en un archivo Parquet.
+"""
+
+from datetime import date
+
+from cartolas.config import FECHA_MINIMA, PARQUET_FILE_PATH, SCHEMA, FECHA_MAXIMA
 from cartolas.download import download_cartolas_range
-from utiles.decorators import timer
-from cartolas.transform import transform_cartola_folder
-from cartolas.save import save_lazyframe_to_parquet
-from pathlib import Path
-from utiles.file_tools import clean_txt_folder
 from cartolas.read import read_parquet_cartolas_lazy
+from cartolas.save import save_lazyframe_to_parquet
+from cartolas.transform import transform_cartola_folder
+from utiles.fechas import date_range, consecutive_date_ranges
+from utiles.decorators import timer
+from utiles.file_tools import clean_txt_folder
 
-FECHA_MAXIMA = date(2008, 2, 10)
+import polars as pl
+
+# FECHA_MAXIMA = date(2018, 6, 11)
 
 
 @timer
-def first_run(
-    start_date: date = FECHA_MINIMA,
-    days: int = INITIAL_DATE_RANGE,
-    parquet_file: Path = PARQUET_FILE_PATH,
+def update_parquet(
+    parquet_file=PARQUET_FILE_PATH,
+    min_date: date = FECHA_MINIMA,
+    max_date: date = FECHA_MAXIMA,
+    sleep_time: int = 1,
 ) -> None:
-    # Creamos los sets de fechas para bajar
-    date_sets = consecutive_date_ranges(
-        date_range(start_date=start_date, end_date=start_date + timedelta(days))
-    )
+    """
+    Actualiza los datos de las cartolas en un archivo Parquet.
 
-    for i, (s_date, e_date) in enumerate(date_sets):
-        print(f"Rango: {i}, inicio={s_date}, fin={e_date}")
-        download_cartolas_range(start_date=s_date, end_date=e_date)
+    Args:
+        parquet_file (Path): Ruta del archivo Parquet.
+        min_date (date): Fecha mínima para la actualización.
+        max_date (date): Fecha máxima para la actualización.
+        sleep_time (int): Tiempo de espera entre descargas en segundos.
 
-    lazy_df = transform_cartola_folder(unique=True)
-    save_lazyframe_to_parquet(lazy_df=lazy_df, filename=parquet_file)
-    clean_txt_folder(delete_all=True)
+    Returns:
+        None
+    """
 
+    # TODO: Esto se podría unir con el script de baja diaria de la cartola
+    # TODO: Bajar cada día los últimos 30 días por si hay cambios (eso pasa)
 
-@timer
-def update_parquet(start_date: date = FECHA_MINIMA, end_date: date = FECHA_MAXIMA):
-    lazy_df = read_parquet_cartolas_lazy(parquet_file=PARQUET_FILE_PATH)
+    # Chequea si existe o no el archivo parquet
+    if parquet_file.exists():
+        # Lee el archivo parquet
+        lazy_parquet_df = read_parquet_cartolas_lazy(parquet_file=parquet_file)
+        # Obtiene las fechas únicas en el archivo parquet
+        dates_in_parquet = (
+            lazy_parquet_df.select(["FECHA_INF"])
+            .unique()
+            .collect()
+            .to_series()
+            .to_list()
+        )
 
-    # Saco las fechas que están en el parquet en una lista
-    dates_in_parquet = (
-        lazy_df.select(["FECHA_INF"]).unique().collect().to_series().to_list()
-    )
-    all_dates = date_range(start_date=start_date, end_date=end_date)
+    else:
+        # Si el archivo parquet no existe, crea un LazyFrame vacío con el esquema definido
+        lazy_parquet_df = pl.LazyFrame(schema_overrides=SCHEMA)
+        # Obviamente en este caso no hay fechas
+        dates_in_parquet = []
 
+    # Rango de todas las fechas entre la mínima y la máxima
+    all_dates = date_range(min_date, max_date)
+
+    # Fechas faltantes en el parquet
     missing_dates = sorted(list(set(all_dates) - set(dates_in_parquet)))
 
-    missing_dates_sets = consecutive_date_ranges(missing_dates)
+    # Si hay alguna fecha faltante se hace correr el proceso de bajarlas y subirlas
+    if missing_dates:
+        # Lista de sets de fechas
+        print("Fechas faltantes: (rangos)")
+        for i, fecha in enumerate(consecutive_date_ranges(missing_dates)):
+            print(i, "-", fecha)
 
-    # print (dates_in_parquet)
-    # print (all_dates)
-    print(max(dates_in_parquet))
-    print(missing_dates)
-    print(missing_dates_sets)
+        # Se bajan las cartolas desde la cmf
+        download_cartolas_range(missing_dates, sleep_time)
+
+        # Transforma los datos del csv en el formato del parquet
+        # Por ejemplo se cambian los S/N por bool y se ajustan los factores de ajuste y reparto
+        # Y estos datos se guardan en un LazyFrame
+        lazy_df_newdata = transform_cartola_folder(unique=True)
+
+        # Se unen los dos LazyFrame, uno del parquet y otro del nuevo
+        # TODO: ver atributos de la función concat, creo que asume que es horizontal
+        df = pl.concat([lazy_parquet_df, lazy_df_newdata])
+
+        # Se graba el parquet y se verifica que no haya duplicados
+        print("Grabando parquet")
+        save_lazyframe_to_parquet(lazy_df=df, filename=parquet_file)
+
+        # Se borran los txt
+        clean_txt_folder(delete_all=True)
+
+    else:
+        print("Archivo parquet actualizado, no hay cambios")
 
 
 if __name__ == "__main__":
-    # first_run()
     update_parquet()
