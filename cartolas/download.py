@@ -17,8 +17,6 @@ from .config import (
     ERROR_FOLDER,
     CORRECT_FOLDER,
     CARTOLAS_FOLDER,
-    FECHA_MINIMA,
-    FECHA_MAXIMA,
 )
 from time import sleep
 
@@ -122,9 +120,7 @@ def fetch_cartola_data(
         raise e
 
 
-def download_cartolas_range(
-    input_date_range: list[date], sleep_time: int = 1
-):
+def download_cartolas_range(input_date_range: list[date], sleep_time: int = 1):
     """Esta es una función que hace todo el proceso de bajada, incluyendo calcular los rangos de fechas
     con las restricciones de la CMF (30 días máximo), también elimina las cartolas que no tienen información
     """
@@ -150,7 +146,7 @@ def main():
     end_date = date(2021, 2, 22)
     rango = date_range(start_date, end_date)
     download_cartolas_range(rango)
-    
+
 
 if __name__ == "__main__":
     main()

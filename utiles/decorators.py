@@ -12,7 +12,20 @@ T = TypeVar("T")
 def retry_function(
     func: Callable[..., T], max_attempts: int = 10, delay: int = 10
 ) -> Callable[..., T]:
-    """Decorador que intenta ejecutar una función varias veces si hay una excepción"""
+    """
+    Decorador que intenta ejecutar una función varias veces si hay una excepción.
+
+    Args:
+        func (Callable[..., T]): La función a ser decorada.
+        max_attempts (int, opcional): Número máximo de intentos. Por defecto es 10.
+        delay (int, opcional): Tiempo de espera entre intentos en segundos. Por defecto es 10.
+
+    Returns:
+        Callable[..., T]: La función envuelta que incluye la lógica de reintento.
+
+    Raises:
+        Exception: Si la función no se puede ejecutar exitosamente después de los intentos especificados.
+    """
 
     def wrapper(*args, **kwargs) -> T:
         attempts = 0
@@ -34,8 +47,20 @@ def retry_function(
 def exp_retry_function(
     func: Callable[..., T], max_attempts: int = 12
 ) -> Callable[..., T]:
-    """Decorador que intenta ejecutar una función varias veces si hay una excepción
-    con un crecimiento exponencial en el delay"""
+    """
+    Decorador que intenta ejecutar una función varias veces si hay una excepción
+    con un crecimiento exponencial en el delay.
+
+    Args:
+        func (Callable[..., T]): La función a ser decorada.
+        max_attempts (int, opcional): Número máximo de intentos. Por defecto es 12.
+
+    Returns:
+        Callable[..., T]: La función envuelta que incluye la lógica de reintento exponencial.
+
+    Raises:
+        Exception: Si la función no se puede ejecutar exitosamente después de los intentos especificados.
+    """
 
     def wrapper(*args, **kwargs) -> T:
         attempts = 0
