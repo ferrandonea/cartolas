@@ -1,6 +1,6 @@
 """Esto son modulos para bajar una cartola de la CMF"""
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from captchapass import predict
 from playwright.sync_api import Page, sync_playwright
 from utiles.decorators import retry_function, exp_retry_function
@@ -8,8 +8,20 @@ from utiles.file_tools import clean_txt_folder
 from utiles.fechas import format_date_cmf, consecutive_date_ranges, date_range
 from typing import Any
 from pathlib import Path
-from .config import CURRENT_FOLDER, DEFAULT_HEADLESS, URL_CARTOLAS, VERBOSE, TIMEOUT, TEMP_FILE_PWD, ERROR_FOLDER, CORRECT_FOLDER, CARTOLAS_FOLDER, FECHA_MINIMA, FECHA_MAXIMA
+from .config import (
+    DEFAULT_HEADLESS,
+    URL_CARTOLAS,
+    VERBOSE,
+    TIMEOUT,
+    TEMP_FILE_PWD,
+    ERROR_FOLDER,
+    CORRECT_FOLDER,
+    CARTOLAS_FOLDER,
+    FECHA_MINIMA,
+    FECHA_MAXIMA,
+)
 from time import sleep
+
 
 @retry_function
 def goto_with_retry(page: Page, url_str: str, timeout: int = TIMEOUT) -> Any:
@@ -109,28 +121,29 @@ def fetch_cartola_data(
         temp_file_path.rename(error_folder / f"{prediction}.png")
         raise e
 
-def download_cartolas_range(start_date: date = FECHA_MINIMA,
-                            end_date: date = FECHA_MAXIMA,
-                            sleep_time: int = 1):
-    """ Esta es una función que hace todo el proceso de bajada, incluyendo calcular los rangos de fechas
+
+def download_cartolas_range(
+    start_date: date = FECHA_MINIMA, end_date: date = FECHA_MAXIMA, sleep_time: int = 1
+):
+    """Esta es una función que hace todo el proceso de bajada, incluyendo calcular los rangos de fechas
     con las restricciones de la CMF (30 días máximo), también elimina las cartolas que no tienen información
     """
-    
-    #Establezco conjunto de rango de fechas
+
+    # Establezco conjunto de rango de fechas
     date_range_set = consecutive_date_ranges(date_range(start_date, end_date))
     # Número de subconjuntos de rangos de fechas
     num_range_set = len(date_range_set)
-    print (f"{start_date=}, {end_date=}, {num_range_set=}")
-    
+    print(f"{start_date=}, {end_date=}, {num_range_set=}")
+
     # Recorro cada rango de fechas y bajo cartolas de la cmf
     for i, (start_date, end_date) in enumerate(date_range_set):
-        print(f"Descargando rango {i+1} de {num_range_set}")
+        print(f"Descargando rango {i + 1} de {num_range_set}")
         print(f"{start_date=}, {end_date=}")
-        get_cartola_from_cmf(start_date, end_date, verbose=True)    
+        get_cartola_from_cmf(start_date, end_date, verbose=True)
         sleep(sleep_time)
 
-    #Limpia archivos txt que son más chicos que el mínimo definido en kb
-    clean_txt_folder()    
+    # Limpia archivos txt que son más chicos que el mínimo definido en kb
+    clean_txt_folder()
 
 
 def main(VERBOSE, download_cartolas):
@@ -138,13 +151,11 @@ def main(VERBOSE, download_cartolas):
     start_date = date(2021, 1, 1)
     end_date = date(2021, 6, 22)
     import time
-    from random import randint
 
     start = time.perf_counter()
-    
+
     download_cartolas_range(start_date, end_date)
     print(f"Tiempo total: {time.perf_counter() - start:.2f}") if VERBOSE else None
-
 
 
 if __name__ == "__main__":

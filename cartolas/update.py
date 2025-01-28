@@ -11,14 +11,15 @@ from pathlib import Path
 from utiles.file_tools import clean_txt_folder
 from cartolas.read import read_parquet_cartolas_lazy
 
-FECHA_MAXIMA = date(2008,2,10)
-
-
-
+FECHA_MAXIMA = date(2008, 2, 10)
 
 
 @timer
-def first_run(start_date: date = FECHA_MINIMA, days: int = INITIAL_DATE_RANGE, parquet_file: Path = PARQUET_FILE_PATH) -> None:
+def first_run(
+    start_date: date = FECHA_MINIMA,
+    days: int = INITIAL_DATE_RANGE,
+    parquet_file: Path = PARQUET_FILE_PATH,
+) -> None:
     # Creamos los sets de fechas para bajar
     date_sets = consecutive_date_ranges(
         date_range(start_date=start_date, end_date=start_date + timedelta(days))
@@ -32,24 +33,28 @@ def first_run(start_date: date = FECHA_MINIMA, days: int = INITIAL_DATE_RANGE, p
     save_lazyframe_to_parquet(lazy_df=lazy_df, filename=parquet_file)
     clean_txt_folder(delete_all=True)
 
+
 @timer
 def update_parquet(start_date: date = FECHA_MINIMA, end_date: date = FECHA_MAXIMA):
     lazy_df = read_parquet_cartolas_lazy(parquet_file=PARQUET_FILE_PATH)
-    
+
     # Saco las fechas que están en el parquet en una lista
-    dates_in_parquet = lazy_df.select(["FECHA_INF"]).unique().collect().to_series().to_list()
+    dates_in_parquet = (
+        lazy_df.select(["FECHA_INF"]).unique().collect().to_series().to_list()
+    )
     all_dates = date_range(start_date=start_date, end_date=end_date)
-    
+
     missing_dates = sorted(list(set(all_dates) - set(dates_in_parquet)))
-    
+
     missing_dates_sets = consecutive_date_ranges(missing_dates)
-    
-    #print (dates_in_parquet)
-    #print (all_dates)
-    print (max(dates_in_parquet))
-    print (missing_dates)
-    print (missing_dates_sets)
+
+    # print (dates_in_parquet)
+    # print (all_dates)
+    print(max(dates_in_parquet))
+    print(missing_dates)
+    print(missing_dates_sets)
+
 
 if __name__ == "__main__":
-    #first_run()
+    # first_run()
     update_parquet()

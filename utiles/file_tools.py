@@ -28,7 +28,7 @@ def generate_hash_image_name(lenght=HASH_LENGTH):
 
 # Este import debe estar acá sino hay un error de importación circular
 # El comentario de noqa es para que no huevee con el orden de los imports ruff
-from cartolas.config import CARTOLAS_FOLDER # noqa: E402
+from cartolas.config import CARTOLAS_FOLDER  # noqa: E402
 
 
 def clean_txt_folder(

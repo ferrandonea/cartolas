@@ -1,5 +1,6 @@
 import polars as pl
 
+
 def map_s_n_to_bool(column_name: str) -> pl.Expr:
     """
     Crea una expresión para mapear los valores 'S' y 'N' de una columna a valores booleanos.
@@ -71,4 +72,3 @@ def replace_null_with_one(column_name: str) -> pl.Expr:
         └──────────────────┘
     """
     return pl.col(column_name).fill_null(1).alias(column_name)
-

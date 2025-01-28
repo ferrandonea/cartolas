@@ -55,6 +55,7 @@ def exp_retry_function(
 
     return wrapper
 
+
 def timer(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorador que mide y muestra el tiempo de ejecución de una función.

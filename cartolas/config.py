@@ -33,6 +33,7 @@ PARQUET_FILE_PATH = PARQUET_FOLDER / PARQUET_FILE_NAME
 
 # El import es acá para evitar importaciones circulares con file_tools.py
 from utiles.file_tools import generate_hash_image_name  # noqa: E402
+
 # Este es la carpeta donde se guardan los archivos temporales
 TEMP_FOLDER_NAME = "temp"
 TEMP_FOLDER = CURRENT_FOLDER / TEMP_FOLDER_NAME
@@ -45,7 +46,7 @@ FECHA_MINIMA = date(2007, 12, 31)
 # Si es antes de las 11 es el de ante ayer, si es después de las 11 es el de ayer
 DIAS_ATRAS = 1 if datetime.now().hour > 11 else 2
 FECHA_MAXIMA = datetime.now().date() - timedelta(days=DIAS_ATRAS)
-INITIAL_DATE_RANGE: int = 33 # días que baja la primera vez
+INITIAL_DATE_RANGE: int = 33  # días que baja la primera vez
 
 # Caracteristicas de polars
 COLUMNAS_BOOLEAN = ["PARTICIPES_INST", "FONDO_PEN"]
@@ -79,4 +80,3 @@ SCHEMA = {
     "FACTOR DE AJUSTE": pl.Float64,
     "FACTOR DE REPARTO": pl.Float64,
 }
-
