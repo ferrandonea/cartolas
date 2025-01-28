@@ -11,7 +11,16 @@ MIN_FILE_SIZE = 1000  # 1 KB
 WILDCARD_CARTOLAS_TXT = "ffmm*.txt"
 
 
-def generate_hash_name(length=HASH_LENGTH):
+def generate_hash_name(length=HASH_LENGTH) -> str:
+    """
+    Genera un nombre de archivo hash aleatorio.
+
+    Args:
+        length (int, opcional): Longitud del hash generado. Por defecto es 12.
+
+    Returns:
+        str: Los primeros 'length' caracteres del hash SHA-256 de una cadena aleatoria.
+    """
     # Genera una cadena aleatoria
     random_string = "".join(
         random.choices(string.ascii_letters + string.digits, k=length)
@@ -22,8 +31,17 @@ def generate_hash_name(length=HASH_LENGTH):
     return hash_object.hexdigest()[:length]
 
 
-def generate_hash_image_name(lenght=HASH_LENGTH):
-    return generate_hash_name(length=lenght) + ".png"
+def generate_hash_image_name(length=HASH_LENGTH) -> str:
+    """
+    Genera un nombre de archivo hash aleatorio con extensión .png.
+
+    Args:
+        length (int, opcional): Longitud del hash generado. Por defecto es 12.
+
+    Returns:
+        str: Nombre de archivo hash con extensión .png.
+    """
+    return generate_hash_name(length=length) + ".png"
 
 
 # Este import debe estar acá sino hay un error de importación circular
@@ -36,7 +54,7 @@ def clean_txt_folder(
     wildcard: str = WILDCARD_CARTOLAS_TXT,
     delete_all: bool = False,
     min_file_size: int = MIN_FILE_SIZE,
-) -> None | bool:
+) -> None:
     """
     Elimina archivos de una carpeta basándose en su tamaño o elimina todos los archivos.
 
@@ -50,7 +68,7 @@ def clean_txt_folder(
                              tamaño serán eliminados si delete_all es False.
 
     Returns:
-        None | bool: None cuando se eliminan archivos, o True/False si check_len está activado.
+        None: No retorna ningún valor.
 
     Note:
         - Si delete_all es False, se asume que los archivos menores a min_file_size no tienen
@@ -61,8 +79,8 @@ def clean_txt_folder(
         >>> clean_txt_folder(delete_all=True)
         Archivo ffmm_20230101 borrado
         Archivo ffmm_20230102 borrado
-        >>> clean_txt_folder(check_len=True)
-        False
+        >>> clean_txt_folder()
+        Archivo ffmm_20230101 borrado porque es menor a 1.00 KB
     """
     folder_path = Path(folder)
 

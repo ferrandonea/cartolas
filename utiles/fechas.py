@@ -4,23 +4,50 @@ from datetime import date, datetime, timedelta
 
 
 def from_date_to_datetime(input_date: datetime | date) -> date:
-    """Esto recibe una fecha, si es datetime da la fecha, si es date la deja igual"""
+    """
+    Convierte un objeto datetime a date. Si el input ya es un date, lo retorna sin cambios.
+
+    Args:
+        input_date (datetime | date): La fecha a convertir.
+
+    Returns:
+        date: La fecha convertida.
+
+    Raises:
+        ValueError: Si el input no es de tipo datetime o date.
+    """
     if not isinstance(input_date, (datetime, date)):
         raise ValueError("El input debe ser de tipo datetime o date")
     return input_date.date() if isinstance(input_date, datetime) else input_date
 
 
 def format_date_cmf(input_date: date | datetime) -> str:
-    """Formatea una fecha a string para la CMF"""
+    """
+    Formatea una fecha a string en el formato requerido por la CMF (dd/mm/yyyy).
+
+    Args:
+        input_date (date | datetime): La fecha a formatear.
+
+    Returns:
+        str: La fecha formateada como string.
+    """
     CMF_DATE_FORMAT = r"%d/%m/%Y"
     return from_date_to_datetime(input_date).strftime(CMF_DATE_FORMAT)
 
 
 def date_range(start_date: date, end_date: date) -> list[date]:
     """
-    Genera un rango de fechas entre dos fechas, esta es una función sencilla
-    que toma todo como date, habría que camiarla para tomar datetime, es inclusivo
-    de la fecha de inicio y la del final
+    Genera una lista de fechas entre dos fechas dadas, inclusive.
+
+    Args:
+        start_date (date): La fecha de inicio del rango.
+        end_date (date): La fecha de término del rango.
+
+    Returns:
+        list[date]: Lista de fechas entre start_date y end_date, inclusive.
+
+    Raises:
+        ValueError: Si la fecha de inicio es mayor que la fecha de término.
     """
 
     if (end_date - start_date).days < 0:
@@ -36,9 +63,19 @@ def date_range(start_date: date, end_date: date) -> list[date]:
 def consecutive_date_ranges(
     date_list: list[date], max_days: int = 29
 ) -> list[tuple[date, date]]:
-    """Esta función identifica secuencias de fechas que están separadas por no más de un día,
-    creando rangos. Un rango se cierra si la diferencia entre su primera y última fecha
-    excede 'max_days' o si hay un salto de más de un día entre fechas consecutivas.
+    """
+    Identifica secuencias de fechas consecutivas en una lista de fechas, creando rangos.
+
+    Args:
+        date_list (list[date]): Lista de fechas a procesar.
+        max_days (int, opcional): Número máximo de días permitidos en un rango. Por defecto es 29.
+
+    Returns:
+        list[tuple[date, date]]: Lista de tuplas con los rangos de fechas consecutivas.
+
+    Note:
+        - Un rango se cierra si la diferencia entre su primera y última fecha excede 'max_days'
+          o si hay un salto de más de un día entre fechas consecutivas.
     """
 
     if not date_list:
