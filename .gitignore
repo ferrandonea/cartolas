@@ -1,10 +1,13 @@
-# Imagenes de corrida
+# Imagenes del modelo
 cartolas/correct/*.png 
 cartolas/errors/*.png
 cartolas/temp/*.png
 
 # Cartolas txt
 cartolas/txt/*.txt
+
+# Archivos parquet
+*.parquet
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
