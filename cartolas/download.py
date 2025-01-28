@@ -123,17 +123,15 @@ def fetch_cartola_data(
 
 
 def download_cartolas_range(
-    start_date: date = FECHA_MINIMA, end_date: date = FECHA_MAXIMA, sleep_time: int = 1
+    input_date_range: list[date], sleep_time: int = 1
 ):
     """Esta es una función que hace todo el proceso de bajada, incluyendo calcular los rangos de fechas
     con las restricciones de la CMF (30 días máximo), también elimina las cartolas que no tienen información
     """
-
     # Establezco conjunto de rango de fechas
-    date_range_set = consecutive_date_ranges(date_range(start_date, end_date))
+    date_range_set = consecutive_date_ranges(input_date_range)
     # Número de subconjuntos de rangos de fechas
     num_range_set = len(date_range_set)
-    print(f"{start_date=}, {end_date=}, {num_range_set=}")
 
     # Recorro cada rango de fechas y bajo cartolas de la cmf
     for i, (start_date, end_date) in enumerate(date_range_set):
@@ -146,17 +144,13 @@ def download_cartolas_range(
     clean_txt_folder()
 
 
-def main(VERBOSE, download_cartolas):
+def main():
     """ESTO ES TEMPORAL, ES EL MAIN"""
     start_date = date(2021, 1, 1)
-    end_date = date(2021, 6, 22)
-    import time
-
-    start = time.perf_counter()
-
-    download_cartolas_range(start_date, end_date)
-    print(f"Tiempo total: {time.perf_counter() - start:.2f}") if VERBOSE else None
-
+    end_date = date(2021, 2, 22)
+    rango = date_range(start_date, end_date)
+    download_cartolas_range(rango)
+    
 
 if __name__ == "__main__":
-    main(VERBOSE, get_cartola_from_cmf)
+    main()
