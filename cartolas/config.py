@@ -45,7 +45,7 @@ FECHA_MINIMA = date(2007, 12, 31)
 # Si es antes de las 11 es el de ante ayer, si es después de las 11 es el de ayer
 DIAS_ATRAS = 1 if datetime.now().hour > 11 else 2
 FECHA_MAXIMA = datetime.now().date() - timedelta(days=DIAS_ATRAS)
-INITIAL_DATE_RANGE = 33 # días que baja la primera vez
+INITIAL_DATE_RANGE: int = 33 # días que baja la primera vez
 
 # Caracteristicas de polars
 COLUMNAS_BOOLEAN = ["PARTICIPES_INST", "FONDO_PEN"]
