@@ -96,3 +96,6 @@ SOYFOCUS_FUNDS = {
 # Carpeta donde se guardan los archivos Parquet
 SOYFOCUS_PARQUET_FILE_NAME = "soyfocus.parquet"
 SOYFOCUS_PARQUET_FILE_PATH = PARQUET_FOLDER / SOYFOCUS_PARQUET_FILE_NAME
+
+# COSAS DE MAIL
+SENDER_MAIL, SENDER_NAME, TO_EMAILS = "francisco@soyfocus.com", "Francisco", ["francisco@soyfocus.com"]
