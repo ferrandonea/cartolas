@@ -54,8 +54,7 @@ def transform_single_cartola(
         pl.concat_str(
             [pl.col("RUN_FM").cast(pl.Utf8), pl.lit("-"), pl.col("SERIE")]
         ).alias("RUN_FM_SERIE"),
-    )
-
+    ).drop(["NOM_ADM"])
     return lazy_df
 
 
