@@ -1,7 +1,8 @@
 import polars as pl
 from pathlib import Path
+from utiles.decorators import timer
 
-
+@timer
 def save_lazyframe_to_parquet(
     lazy_df: pl.LazyFrame, filename: str | Path, unique: bool = True
 ) -> None:
