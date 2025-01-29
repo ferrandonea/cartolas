@@ -13,13 +13,16 @@ URL_CARTOLAS = (
 VERBOSE = True
 TIMEOUT = 500_000
 
+IMAGES_FOLDER_NAME = "images"
+IMAGES_FOLDER = CURRENT_FOLDER / IMAGES_FOLDER_NAME
+
 # Carpeta donde se guardan los errores
 ERROR_FOLDER_NAME = "errors"
-ERROR_FOLDER = CURRENT_FOLDER / ERROR_FOLDER_NAME
+ERROR_FOLDER = IMAGES_FOLDER / ERROR_FOLDER_NAME
 
 # Carpeta donde se guardan los archivos correctos
 CORRECT_FOLDER_NAME = "correct"
-CORRECT_FOLDER = CURRENT_FOLDER / CORRECT_FOLDER_NAME
+CORRECT_FOLDER = IMAGES_FOLDER / CORRECT_FOLDER_NAME
 
 # Carpeta donde se guardan los archivos txt de las cartolas
 CARTOLAS_FOLDER_NAME = "txt"
@@ -37,7 +40,7 @@ from utiles.file_tools import generate_hash_image_name  # noqa: E402
 
 # Carpeta donde se guardan los archivos temporales
 TEMP_FOLDER_NAME = "temp"
-TEMP_FOLDER = CURRENT_FOLDER / TEMP_FOLDER_NAME
+TEMP_FOLDER = IMAGES_FOLDER / TEMP_FOLDER_NAME
 TEMP_FILE_NAME = generate_hash_image_name()
 TEMP_FILE_PWD = TEMP_FOLDER / TEMP_FILE_NAME
 

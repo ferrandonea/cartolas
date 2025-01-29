@@ -1,7 +1,5 @@
 # Imagenes del modelo
-cartolas/correct/*.png 
-cartolas/errors/*.png
-cartolas/temp/*.png
+cartolas/images/*/*.png     
 
 # Cartolas txt
 cartolas/txt/*.txt
