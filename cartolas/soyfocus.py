@@ -7,10 +7,12 @@ from cartolas.read import read_parquet_cartolas_lazy
 from cartolas.save import save_lazyframe_to_parquet
 import polars as pl
 from pathlib import Path
-
+from datetime import date
 # Lista de RUNs identificadores de los fondos SoyFocus
 SOYFOCUS_RUNS = list(SOYFOCUS_FUNDS.keys())
-
+LIMITE_COSTOS_ANUAL = 0.5
+FECHA_INICIO_COSTOS = date(2024, 4, 1) # confirmar 
+DIAS_ANUAL = 366
 
 def save_soyfocus_parquet(
     allfunds_file: Path = PARQUET_FILE_PATH,
@@ -33,7 +35,7 @@ def save_soyfocus_parquet(
     lazy_df = (
         read_parquet_cartolas_lazy(parquet_path=allfunds_file)
         .filter(pl.col("RUN_FM").is_in(SOYFOCUS_RUNS))
-        .drop(["RUN_ADM", "NOM_ADM"])  # Elimina las columnas administrativas
+        .drop(["RUN_ADM"])  # Elimina las columnas administrativas
         .with_columns(
             (
                 (
@@ -44,10 +46,41 @@ def save_soyfocus_parquet(
                 * pl.col("VALOR_CUOTA")
             ).alias("PATRIMONIO_AJUSTADO")
         )  # Patrimonio ajustado según la circular 1738 CMF
-        .with_columns((pl.col("REM_FIJA")+pl.col("REM_VARIABLE")+pl.col("GASTOS_AFECTOS")+pl.col("GASTOS_NO_AFECTOS")).alias("COSTOS_TOTALES"))
-        .with_columns((pl.col("PATRIMONIO_AJUSTADO") + pl.col("COSTOS_TOTALES")).alias("PATRIMONIO_AJUSTADO_COSTOS"))
-        .with_columns((pl.col("COSTOS_TOTALES")/pl.col("PATRIMONIO_AJUSTADO_COSTOS")).alias("TASA_COSTOS_DIARIA"))
-        .with_columns((pl.col("TASA_COSTOS_DIARIA")*366).alias("TASA_COSTOS_ANUAL"))
+        .with_columns(
+            (
+                + pl.col("GASTOS_AFECTOS")
+                + pl.col("GASTOS_NO_AFECTOS")
+            ).alias("COSTOS_TOTALES")
+        )
+        .with_columns(
+            (pl.col("PATRIMONIO_AJUSTADO") + pl.col("COSTOS_TOTALES")).alias(
+                "PATRIMONIO_AJUSTADO_COSTOS"
+            )
+        )
+        .with_columns(
+            ((100*pl.col("COSTOS_TOTALES") / pl.col("PATRIMONIO_AJUSTADO_COSTOS")).fill_nan(0).fill_null(0)).alias(
+                "TASA_COSTOS_DIARIA_%"
+            )
+        )
+        .with_columns((pl.col("TASA_COSTOS_DIARIA_%") * DIAS_ANUAL).alias("TASA_COSTOS_ANUALIZADA_%"))
+        .with_columns(
+            pl.when(pl.col("FECHA_INF") > FECHA_INICIO_COSTOS)
+            .then(pl.lit(LIMITE_COSTOS_ANUAL))
+            .otherwise(pl.lit(0))
+            .alias("LIMITE_COSTOS_ANUAL")
+        )
+        .with_columns(
+            (
+                (LIMITE_COSTOS_ANUAL * pl.col("PATRIMONIO_AJUSTADO"))/(DIAS_ANUAL-LIMITE_COSTOS_ANUAL)
+             
+             
+             ).alias("LIMITE_COSTOS_ANUAL_PATRIMONIO")
+        )
+        .with_columns((pl.col("LIMITE_COSTOS_ANUAL_PATRIMONIO")/DIAS_ANUAL).alias("LIMITE_COSTOS_DIARIO"))
+        
+        
+        .with_columns((pl.col("TASA_COSTOS_ANUALIZADA_%") < LIMITE_COSTOS_ANUAL).alias("COSTO_ANUAL_OK"))
+        
     )
 
     # Guarda los datos filtrados en un nuevo archivo parquet
@@ -68,10 +101,11 @@ def read_soyfocus_parquet(parquet_path: Path = SOYFOCUS_PARQUET_FILE_PATH):
     Returns:
         pl.DataFrame: DataFrame Polars que contiene los datos de los fondos SoyFocus.
     """
-    return read_parquet_cartolas_lazy(parquet_path=parquet_path, sorted=False)
+    return read_parquet_cartolas_lazy(parquet_path=parquet_path, sorted=False).sort(["FECHA_INF","RUN_FM","SERIE"])
 
 
 if __name__ == "__main__":
     save_soyfocus_parquet()
     df = read_soyfocus_parquet()
     print(df.collect())
+    df.collect().write_csv("soyfocus.csv")
