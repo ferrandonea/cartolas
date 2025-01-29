@@ -17,7 +17,7 @@ from utiles.file_tools import clean_txt_folder
 
 import polars as pl
 
-# FECHA_MAXIMA = date(2018, 6, 11)
+#FECHA_MAXIMA = date(2014, 1, 11)
 
 
 @timer
@@ -46,7 +46,7 @@ def update_parquet(
     # Chequea si existe o no el archivo parquet
     if parquet_file.exists():
         # Lee el archivo parquet
-        lazy_parquet_df = read_parquet_cartolas_lazy(parquet_file=parquet_file)
+        lazy_parquet_df = read_parquet_cartolas_lazy(parquet_path=parquet_file)
         # Obtiene las fechas únicas en el archivo parquet
         dates_in_parquet = (
             lazy_parquet_df.select(["FECHA_INF"])
@@ -55,6 +55,7 @@ def update_parquet(
             .to_series()
             .to_list()
         )
+
 
     else:
         # Si el archivo parquet no existe, crea un LazyFrame vacío con el esquema definido
@@ -70,10 +71,10 @@ def update_parquet(
 
     # Si hay alguna fecha faltante se hace correr el proceso de bajarlas y subirlas
     if missing_dates:
-        # Lista de sets de fechas
+        # Lista de sets de fechas (esto es solo para ver que se está bajando bien)
         print("Fechas faltantes: (rangos)")
         for i, fecha in enumerate(consecutive_date_ranges(missing_dates)):
-            print(i, "-", fecha)
+            print(i, ":", " -> ".join([x.strftime("%d/%m/%Y") for x in fecha]))
 
         # Se bajan las cartolas desde la cmf
         download_cartolas_range(missing_dates, sleep_time)
