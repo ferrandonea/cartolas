@@ -10,11 +10,12 @@ from cartolas.save import save_lazyframe_to_parquet
 import polars as pl
 from pathlib import Path
 from datetime import date
+from typing import Optional, List
 
 # Lista de RUNs identificadores de los fondos SoyFocus
 SOYFOCUS_RUNS: list[str] = list(SOYFOCUS_FUNDS.keys())
 # Límite máximo permitido para los costos anuales (en porcentaje)
-LIMITE_COSTOS_ANUAL: float = 0.5
+LIMITE_GASTOS_ANUAL: float = 0.5
 # Fecha desde la cual se aplica el límite de costos
 FECHA_INICIO_COSTOS: date = date(2024, 4, 1)
 # Días en el año para cálculos anualizados
@@ -174,6 +175,7 @@ def create_soyfocus_parquet(
                 "EFECTO_PRECIO_EN_DELTA_PATRIMONIO"
             )
         )
+        .with_columns(pl.col("PATRIMONIO_NETO_ANTERIOR").fill_null(0).fill_nan(0))
     )
 
     # Guarda los resultados en formato parquet
@@ -187,293 +189,233 @@ def soy_focus_by_run(
     lazy_df: pl.LazyFrame,
     soyfocus_by_run_file: Path = SOYFOCUS_BY_RUN_PARQUET_FILE_PATH,
     sorted: bool = True,
-    sort_columns: list[str] | None = None,
+    sort_columns: Optional[List[str]] = None,
     descending: bool = False,
 ) -> pl.LazyFrame:
-    # TODO: Sacar de la función y hacer variables globales
-    # TODO: Ver la lógica del efecto de los factores de reparto y ajuste a nivel de fondo
+    """
+    Agrupa y suma las métricas financieras por RUN de fondo y fecha.
+
+    Esta función toma un LazyFrame con datos detallados de fondos y realiza una agregación
+    a nivel de RUN y fecha, sumando todas las métricas financieras relevantes como patrimonio,
+    cuotas, gastos y comisiones.
+
+    Args:
+        lazy_df (pl.LazyFrame): DataFrame diferido con los datos de los fondos
+        soyfocus_by_run_file (Path): Ruta donde se guardará el archivo resultante.
+            Por defecto usa SOYFOCUS_BY_RUN_PARQUET_FILE_PATH
+        sorted (bool): Indica si el resultado debe ordenarse. Por defecto True
+        sort_columns (Optional[List[str]]): Lista de columnas para ordenar el resultado.
+            Si es None y sorted es True, se ordena por RUN_FM y FECHA_INF
+        descending (bool): Indica si el ordenamiento debe ser descendente. Por defecto False
+
+    Returns:
+        pl.LazyFrame: LazyFrame agrupado por RUN_FM y FECHA_INF con las sumas de todas
+            las métricas financieras
+
+    Note:
+        Las columnas que se agregan incluyen:
+        - Métricas de cuotas (aportadas, rescatadas, en circulación)
+        - Métricas de patrimonio (neto, ajustado)
+        - Métricas de participantes
+        - Métricas de gastos y comisiones
+        - Métricas de flujos y efectos en patrimonio
+    """
+    # Definición de columnas a procesar
     columns = [
-        "RUN_FM",
-        "FECHA_INF",
-        "CUOTAS_APORTADAS",
-        "CUOTAS_RESCATADAS",
-        "CUOTAS_EN_CIRCULACION",
-        "PATRIMONIO_NETO",
-        "NUM_PARTICIPES",
-        "NUM_PARTICIPES_INST",
-        "REM_FIJA",
-        "REM_VARIABLE",
-        "GASTOS_AFECTOS",
-        "GASTOS_NO_AFECTOS",
-        "COMISION_INVERSION",
-        "COMISION_RESCATE",
-        "PATRIMONIO_AJUSTADO",
-        "GASTOS_TOTALES",
-        "COSTOS_TOTALES",
-        "PATRIMONIO_AJUSTADO_GASTOS",
-        "PATRIMONIO_AJUSTADO_COSTOS",
-        "CUOTAS_NETAS",
-        "FLUJO_NETO",
-        "PATRIMONIO_NETO_ANTERIOR",
-        "DELTA_PATRIMONIO_NETO",
-        "EFECTO_PRECIO_EN_DELTA_PATRIMONIO",
+        "RUN_FM",  # Identificador único del fondo
+        "FECHA_INF",  # Fecha de la información
+        "CUOTAS_APORTADAS",  # Cuotas nuevas aportadas al fondo
+        "CUOTAS_RESCATADAS",  # Cuotas retiradas del fondo
+        "CUOTAS_EN_CIRCULACION",  # Total de cuotas vigentes
+        "PATRIMONIO_NETO",  # Valor total del fondo
+        "NUM_PARTICIPES",  # Número total de partícipes
+        "NUM_PARTICIPES_INST",  # Número de partícipes institucionales
+        "REM_FIJA",  # Remuneración fija
+        "REM_VARIABLE",  # Remuneración variable
+        "GASTOS_AFECTOS",  # Gastos afectos a límites
+        "GASTOS_NO_AFECTOS",  # Gastos no afectos a límites
+        "COMISION_INVERSION",  # Comisiones por inversión
+        "COMISION_RESCATE",  # Comisiones por rescate
+        "PATRIMONIO_AJUSTADO",  # Patrimonio con ajustes
+        "GASTOS_TOTALES",  # Suma total de gastos
+        "COSTOS_TOTALES",  # Suma total de costos
+        "PATRIMONIO_AJUSTADO_GASTOS",  # Patrimonio ajustado por gastos
+        "PATRIMONIO_AJUSTADO_COSTOS",  # Patrimonio ajustado por costos
+        "CUOTAS_NETAS",  # Cuotas aportadas menos rescatadas
+        "FLUJO_NETO",  # Flujo neto de recursos
+        "PATRIMONIO_NETO_ANTERIOR",  # Patrimonio del período anterior
+        "DELTA_PATRIMONIO_NETO",  # Variación del patrimonio
+        "EFECTO_PRECIO_EN_DELTA_PATRIMONIO",  # Efecto del precio en la variación
     ]
+
+    # Columnas para agrupación
     grouping_columns = ["RUN_FM", "FECHA_INF"]
+
+    # Crear lista de agregaciones (suma para todas las columnas excepto las de agrupación)
     agg_list = [pl.col(x).sum() for x in columns if x not in grouping_columns]
-    print(agg_list)
+
+    # Realizar la agrupación y agregación
     lazy_df = (
-        lazy_df.select(columns)
-        .group_by(grouping_columns)
-        .agg(agg_list)
-        .sort(["RUN_FM", "FECHA_INF"])
+        lazy_df.select(columns)  # Seleccionar solo las columnas necesarias
+        .group_by(grouping_columns)  # Agrupar por RUN y fecha
+        .agg(agg_list)  # Sumar todas las métricas
+        .sort(["RUN_FM", "FECHA_INF"])  # Ordenar el resultado
+        .with_columns(
+            (
+                (pl.col("PATRIMONIO_NETO") / pl.col("CUOTAS_EN_CIRCULACION")).round(4)
+            ).alias("PROXY_VALOR_CUOTA")
+        )
     )
+
+    # Guarda los resultados en formato parquet
+    save_lazyframe_to_parquet(
+        lazy_df=lazy_df, filename=soyfocus_by_run_file, unique=True
+    )
+
     return lazy_df
 
 
-def create_tac_report(lazy_df: pl.LazyFrame):
-    pass
+def create_tac_report(
+    lazy_df: pl.LazyFrame,
+    run_only: bool = False,
+    soyfocus_tac_file: Path = SOYFOCUS_TAC_PARQUET_FILE_PATH,
+) -> pl.LazyFrame:
+    """
+    Calcula las tasas anuales de costos (TAC) y gastos para los fondos.
+
+    Esta función realiza los cálculos de tasas de gastos y costos según la normativa CMF,
+    incluyendo las tasas diarias y anualizadas, así como la verificación de límites.
+
+    Fórmulas principales:
+    - TASA_GASTOS_DIARIA_% = 100 * GASTOS_TOTALES / PATRIMONIO_AJUSTADO_GASTOS
+    - TASA_GASTOS_ANUALIZADA_% = TASA_GASTOS_DIARIA_% * DIAS_ANUAL
+    - TDC_% (Tasa Diaria de Costos) = 100 * COSTOS_TOTALES / PATRIMONIO_AJUSTADO_COSTOS
+    - TAC_% = TDC_% * DIAS_ANUAL
+    - ESPACIO_GASTOS_ANUALIZADO = (LIMITE_GASTOS_ANUAL * PATRIMONIO_AJUSTADO_GASTOS) / (100 - LIMITE_GASTOS_ANUAL)
+
+    Args:
+        lazy_df (pl.LazyFrame): DataFrame con los datos de los fondos, debe incluir las columnas:
+            - FECHA_INF: Fecha de la información
+            - RUN_FM: Identificador del fondo
+            - SERIE: Serie del fondo (opcional si run_only=True)
+            - GASTOS_TOTALES: Suma de gastos afectos y no afectos
+            - PATRIMONIO_AJUSTADO_GASTOS: Patrimonio ajustado incluyendo gastos
+            - COSTOS_TOTALES: Suma de gastos y remuneraciones
+            - PATRIMONIO_AJUSTADO_COSTOS: Patrimonio ajustado incluyendo todos los costos
+            - PATRIMONIO_NETO_ANTERIOR: Patrimonio del período anterior
+        run_only (bool): Si True, calcula las tasas a nivel de RUN sin considerar series.
+            Por defecto False.
+        soyfocus_tac_file (Path): Ruta donde se guardará el archivo con los cálculos.
+            Por defecto usa SOYFOCUS_TAC_PARQUET_FILE_PATH.
+
+    Returns:
+        pl.LazyFrame: DataFrame con los cálculos de tasas y límites, incluye:
+            - TASA_GASTOS_DIARIA_%: Tasa de gastos del día
+            - TASA_GASTOS_ANUALIZADA_%: Tasa de gastos anualizada
+            - TDC_%: Tasa diaria de costos
+            - TAC_%: Tasa anual de costos
+            - LIMITE_GASTOS_ANUALIZADO: Límite anual de gastos aplicable
+            - ESPACIO_GASTOS_ANUALIZADO: Espacio disponible para gastos en el año
+            - ESPACIO_GASTOS_DIARIO: Espacio disponible para gastos diarios
+            - CUMPLE_LIMITE_GASTOS_ANUAL: Indicador de cumplimiento del límite
+
+    Note:
+        - Los cálculos siguen la metodología establecida por la CMF
+        - Se aplican límites de gastos según la fecha definida en FECHA_INICIO_COSTOS
+        - Los valores nulos o NaN en los cálculos se reemplazan por 0
+        - Para patrimonios negativos o cero, la TDC se establece en 0
+    """
+    # Define las columnas necesarias para los cálculos
+    columns = [
+        "FECHA_INF",
+        "RUN_FM",
+        "SERIE",
+        "GASTOS_TOTALES",
+        "PATRIMONIO_AJUSTADO_GASTOS",
+        "COSTOS_TOTALES",
+        "PATRIMONIO_AJUSTADO_COSTOS",
+        "PATRIMONIO_NETO_ANTERIOR",
+    ]
+    
+    # Si solo se requiere análisis por RUN, elimina la columna SERIE
+    if run_only:
+        columns.remove("SERIE")
+
+    lazy_df = (
+        # Selecciona solo las columnas necesarias
+        lazy_df.select(columns)
+        # Calcula la tasa diaria de gastos como porcentaje
+        .with_columns(
+            (
+                (100 * pl.col("GASTOS_TOTALES") / pl.col("PATRIMONIO_AJUSTADO_GASTOS"))
+                .fill_nan(0)
+                .fill_null(0)
+            ).alias("TASA_GASTOS_DIARIA_%")
+        )
+        # Anualiza la tasa de gastos
+        .with_columns(
+            (pl.col("TASA_GASTOS_DIARIA_%") * DIAS_ANUAL).alias(
+                "TASA_GASTOS_ANUALIZADA_%"
+            )
+        )
+        # Calcula la tasa diaria de costos (TDC), considerando patrimonio negativo
+        .with_columns(
+            (
+                pl.when(pl.col("PATRIMONIO_NETO_ANTERIOR") <= 0)
+                .then(pl.lit(0))
+                .otherwise(
+                    (
+                        100
+                        * pl.col("COSTOS_TOTALES")
+                        / pl.col("PATRIMONIO_AJUSTADO_COSTOS")
+                    )
+                    .fill_nan(0)
+                    .fill_null(0)
+                )
+            ).alias("TDC_%")
+        )
+        # Calcula la tasa anual de costos (TAC)
+        .with_columns((pl.col("TDC_%") * DIAS_ANUAL).alias("TAC_%"))
+        # Establece el límite de gastos según la fecha
+        .with_columns(
+            pl.when(pl.col("FECHA_INF") > FECHA_INICIO_COSTOS)
+            .then(pl.lit(LIMITE_GASTOS_ANUAL))
+            .otherwise(pl.lit(0))
+            .alias("LIMITE_GASTOS_ANUALIZADO")
+        )
+        # Calcula el espacio disponible para gastos en el año
+        .with_columns(
+            (
+                (LIMITE_GASTOS_ANUAL * pl.col("PATRIMONIO_AJUSTADO_GASTOS"))
+                / (100 - LIMITE_GASTOS_ANUAL)
+            ).alias("ESPACIO_GASTOS_ANUALIZADO")
+        )
+        # Calcula el espacio diario disponible para gastos
+        .with_columns(
+            (pl.col("ESPACIO_GASTOS_ANUALIZADO") / DIAS_ANUAL).alias(
+                "ESPACIO_GASTOS_DIARIO"
+            )
+        )
+        # Verifica el cumplimiento del límite anual de gastos
+        .with_columns(
+            (pl.col("TASA_GASTOS_ANUALIZADA_%") < LIMITE_GASTOS_ANUAL).alias(
+                "CUMPLE_LIMITE_GASTOS_ANUAL"
+            )
+        )
+    )
+
+    # Guarda los resultados en formato parquet
+    save_lazyframe_to_parquet(lazy_df=lazy_df, filename=soyfocus_tac_file, unique=True)
+    
+    return lazy_df
 
 
 if __name__ == "__main__":
-    # Ejecuta el procesamiento y guarda los resultados
     lazy_df = create_soyfocus_parquet()
-    print(lazy_df.collect().head())
-    # Exporta los resultados a CSV para revisión
-    lazy_df.collect().write_csv("cartolas/csv/soyfocus.csv")
-    df2 = soy_focus_by_run(lazy_df)
-    print(df2.collect().tail())
-    print(df2.collect().columns)
+    print(lazy_df.columns)
+    tac = create_tac_report(lazy_df)
+    lazy_df = soy_focus_by_run(lazy_df)
+    tac = create_tac_report(lazy_df, run_only=True)
+    tac.collect().tail(10).write_csv("cartolas/csv/soyfocus.csv")
 
 
-# def create_soy_focus_by_run(lazy_df: pl.LazyFrame, soy_focus_by_run_file: Path = SOYFOCUS_BY_RUN_PARQUET_FILE_PATH, sorted: bool = True, sort_columns: list[str] = None) -> pl.LazyFrame:
-
-#     sorted_columns = ["RUN_FM", "FECHA_INF"] if sort_columns is None else sort_columns
-#     print ([x for x in lazy_df.columns if "FACTOR" not in x and "RUN_FM" not in x and "FECHA_INF" not in x])
-#     lazy_df = lazy_df.group_by(["RUN_FM", "FECHA_INF"]).agg(
-#         pl.col("CUOTAS_APORTADAS").sum(),
-#         pl.col("CUOTAS_RESCATADAS").sum(),
-#         pl.col("CUOTAS_EN_CIRCULACION").sum(),
-#         pl.col("VALOR_CUOTA").sum(),
-#         pl.col("PATRIMONIO_NETO").sum(),
-#         pl.col("NUM_PARTICIPES").sum(),
-#         pl.col("REM_FIJA").sum(),
-#         pl.col("REM_VARIABLE").sum(),
-#         pl.col("GASTOS_AFECTOS").sum(),
-#         pl.col("GASTOS_NO_AFECTOS").sum(),
-#         pl.col("COMISION_INVERSION").sum(),
-#         pl.col("COMISION_RESCATE").sum(),
-#     )
-
-#     #other_df = lazy_df.group_by(["RUN_FM", "FECHA_INF"]).agg()
-#     return lazy_df.sort(sorted_columns) if sorted else lazy_df
-
-
-# def create_soyfocus_by_run(gfgfgthht
-#     soyfocus_file: Path = SOYFOCUS_PARQUET_FILE_PATH,
-#     soyfocus_by_run_file: Path = SOYFOCUS_BY_RUN_PARQUET_FILE_PATH,
-# ) -> pl.LazyFrame:
-#     """
-#     Crea un archivo parquet con datos agregados por RUN de los fondos SoyFocus.
-
-#     Esta función lee los datos de los fondos SoyFocus y los agrupa por RUN y fecha,
-#     calculando las sumas de varios indicadores financieros.
-
-#     Args:
-#         soyfocus_file (Path): Ruta al archivo parquet de SoyFocus.
-#             Por defecto usa SOYFOCUS_PARQUET_FILE_PATH desde config.
-#         soyfocus_by_run_file (Path): Ruta donde se guardará el archivo agregado.
-#             Por defecto usa SOYFOCUS_BY_RUN_PARQUET_FILE_PATH desde config.
-
-#     Returns:
-#         pl.LazyFrame: DataFrame lazy con los datos agregados por RUN.
-#     """
-#     lazy_df = read_parquet_cartolas_lazy(parquet_path=soyfocus_file)
-
-#     # Selecciona las columnas relevantes y realiza la agregación por RUN y fecha
-#     lazy_df = (
-#         lazy_df.select(
-#             [
-#                 "RUN_FM",
-#                 "FECHA_INF",
-#                 "SERIE",
-#                 "CUOTAS_APORTADAS",
-#                 "CUOTAS_RESCATADAS",
-#                 "CUOTAS_EN_CIRCULACION",
-#                 "VALOR_CUOTA",
-#                 "PATRIMONIO_NETO",
-#                 "NUM_PARTICIPES",
-#                 "REM_FIJA",
-#                 "REM_VARIABLE",
-#                 "GASTOS_AFECTOS",
-#                 "GASTOS_NO_AFECTOS",
-#                 "COMISION_INVERSION",
-#                 "COMISION_RESCATE",
-#                 "FACTOR DE AJUSTE",
-#                 "FACTOR DE REPARTO",
-#             ]
-#         )
-#         .group_by(["RUN_FM", "FECHA_INF"])
-#         .agg(
-#             # Calcula la suma de cada indicador financiero
-#             pl.col("CUOTAS_APORTADAS").sum(),
-#             pl.col("CUOTAS_RESCATADAS").sum(),
-#             pl.col("CUOTAS_EN_CIRCULACION").sum(),
-#             pl.col("VALOR_CUOTA").sum(),
-#             pl.col("PATRIMONIO_NETO").sum(),
-#             pl.col("NUM_PARTICIPES").sum(),
-#             pl.col("REM_FIJA").sum(),
-#             pl.col("REM_VARIABLE").sum(),
-#             pl.col("GASTOS_AFECTOS").sum(),
-#             pl.col("GASTOS_NO_AFECTOS").sum(),
-#             pl.col("COMISION_INVERSION").sum(),
-#             pl.col("COMISION_RESCATE").sum(),
-#             pl.col("FACTOR DE AJUSTE").sum(),
-#             pl.col("FACTOR DE REPARTO").sum(),
-#         )
-#         .sort(["RUN_FM", "FECHA_INF"])
-#     )
-
-#     save_lazyframe_to_parquet(
-#         lazy_df=lazy_df, filename=soyfocus_by_run_file, unique=True
-#     )
-
-#     return lazy_df
-
-
-# def create_soyfocus_tac(
-#     soyfocus_by_run_file: Path = SOYFOCUS_BY_RUN_PARQUET_FILE_PATH,
-#     soyfocus_tac_file: Path = SOYFOCUS_TAC_PARQUET_FILE_PATH,
-# ):
-#     """
-#     Calcula las tasas anuales de costos (TAC) para los fondos SoyFocus.
-
-#     Esta función realiza cálculos detallados de costos y tasas según la circular 1738 CMF,
-#     incluyendo ajustes de patrimonio y límites de costos anuales.
-
-#     Args:
-#         soyfocus_by_run_file (Path): Ruta al archivo parquet con datos agregados por RUN.
-#             Por defecto usa SOYFOCUS_BY_RUN_PARQUET_FILE_PATH desde config.
-#     """
-#     lazy_df = (
-#         create_soyfocus_by_run(soyfocus_by_run_file)
-#         # Calcula el patrimonio ajustado según la circular 1738 CMF
-#         .with_columns(
-#             (
-#                 (
-#                     pl.col("CUOTAS_EN_CIRCULACION")
-#                     + pl.col("CUOTAS_RESCATADAS")
-#                     - pl.col("CUOTAS_APORTADAS")
-#                 )
-#                 * pl.col("VALOR_CUOTA")
-#             ).alias("PATRIMONIO_AJUSTADO")
-#         )
-#         # Calcula los costos totales sumando gastos afectos y no afectos
-#         .with_columns(
-#             (+pl.col("GASTOS_AFECTOS") + pl.col("GASTOS_NO_AFECTOS")).alias(
-#                 "COSTOS_TOTALES"
-#             )
-#         )
-#         .with_columns(
-#             (
-#                 +pl.col("COSTOS_TOTALES") + pl.col("REM_FIJA") + pl.col("REM_VARIABLE")
-#             ).alias("COSTOS_Y_REMUNERACIONES_TOTALES")
-#         )
-#         .with_columns(
-#             (pl.col("PATRIMONIO_AJUSTADO") + pl.col("COSTOS_TOTALES")).alias(
-#                 "PATRIMONIO_AJUSTADO_COSTOS"
-#             )
-#         )
-#         .with_columns(
-#             (
-#                 pl.col("PATRIMONIO_AJUSTADO")
-#                 + pl.col("COSTOS_Y_REMUNERACIONES_TOTALES")
-#             ).alias("PATRIMONIO_AJUSTADO_COSTOS_Y_REMUNERACIONES")
-#         )
-#         .with_columns(
-#             (
-#                 (100 * pl.col("COSTOS_TOTALES") / pl.col("PATRIMONIO_AJUSTADO_COSTOS"))
-#                 .fill_nan(0)
-#                 .fill_null(0)
-#             ).alias("TASA_COSTOS_DIARIA_%")
-#         )
-#         .with_columns(
-#             (
-#                 (
-#                     100
-#                     * pl.col("COSTOS_Y_REMUNERACIONES_TOTALES")
-#                     / pl.col("PATRIMONIO_AJUSTADO_COSTOS_Y_REMUNERACIONES")
-#                 )
-#                 .fill_nan(0)
-#                 .fill_null(0)
-#             ).alias("TASA_COSTOS_DIARIA_%")
-#         )
-#         .with_columns(
-#             (pl.col("TASA_COSTOS_DIARIA_%") * DIAS_ANUAL).alias(
-#                 "TASA_COSTOS_ANUALIZADA_%"
-#             )
-#         )
-#         .with_columns(
-#             (pl.col("TASA_COSTOS_Y_REMUNERACIONES_DIARIA_%") * DIAS_ANUAL).alias(
-#                 "TASA_COSTOS_Y_REMUNERACIONES_ANUALIZADA_%"
-#             )
-#         )
-#         .with_columns(
-#             pl.when(pl.col("FECHA_INF") > FECHA_INICIO_COSTOS)
-#             .then(pl.lit(LIMITE_COSTOS_ANUAL))
-#             .otherwise(pl.lit(0))
-#             .alias("LIMITE_COSTOS_ANUAL")
-#         )
-#         .with_columns(
-#             (
-#                 (LIMITE_COSTOS_ANUAL * pl.col("PATRIMONIO_AJUSTADO"))
-#                 / (DIAS_ANUAL - LIMITE_COSTOS_ANUAL)
-#             ).alias("LIMITE_COSTOS_ANUAL_PATRIMONIO")
-#         )
-#         .with_columns(
-#             (pl.col("LIMITE_COSTOS_ANUAL_PATRIMONIO") / DIAS_ANUAL).alias(
-#                 "LIMITE_COSTOS_DIARIO_CLP"
-#             )
-#         )
-#         .with_columns(
-#             (pl.col("TASA_COSTOS_ANUALIZADA_%") < LIMITE_COSTOS_ANUAL).alias(
-#                 "CUMPLE_LIMITE_COSTOS_ANUAL"
-#             )
-#         )
-#     )
-#     save_lazyframe_to_parquet(lazy_df=lazy_df, filename=soyfocus_tac_file, unique=True)
-#     return lazy_df
-
-
-# def create_soyfocus_returns():
-#     pass
-
-
-# def read_soyfocus_parquet(
-#     parquet_path: Path = SOYFOCUS_PARQUET_FILE_PATH, include_series: bool = True
-# ):
-#     """
-#     Lee un archivo parquet que contiene datos de los fondos SoyFocus.
-
-#     Esta función lee un archivo parquet que contiene datos de los fondos SoyFocus y lo devuelve
-#     como un DataFrame Polars.
-
-#     Args:
-#         parquet_path (Path): Ruta al archivo parquet que contiene los datos de los fondos SoyFocus.
-#             Por defecto usa SOYFOCUS_PARQUET_FILE_PATH desde config.
-
-#     Returns:
-#         pl.DataFrame: DataFrame Polars que contiene los datos de los fondos SoyFocus.
-#     """
-#     orden_columnas = (
-#         ["FECHA_INF", "RUN_FM", "SERIE"] if include_series else ["FECHA_INF", "RUN_FM"]
-#     )
-#     return read_parquet_cartolas_lazy(parquet_path=parquet_path, sorted=False).sort(
-#         orden_columnas
-#     )
-
-
-# if __name__ == "__main__":
-#     #create_soyfocus_parquet()
-#     create_soyfocus_by_run()
-#     #create_soyfocus_tac()
-#     #create_soyfocus_returns()
