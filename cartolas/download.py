@@ -134,6 +134,7 @@ def download_cartolas_range(input_date_range: list[date], sleep_time: int = 1):
         print(f"Descargando rango {i + 1} de {num_range_set}")
         print(f"{start_date=}, {end_date=}")
         get_cartola_from_cmf(start_date, end_date, verbose=True)
+        print(f"Esperando {sleep_time} segundos")
         sleep(sleep_time)
 
     # Limpia archivos txt que son más chicos que el mínimo definido en kb
