@@ -54,7 +54,6 @@ def date_range(start_date: date, end_date: date) -> list[date]:
         # TODO: Quizás sería mejor invertir las fechas en vez de lanzar un error
         raise ValueError("La fecha de inicio debe ser menor a la fecha de término")
 
-    print()
     return [
         start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)
     ]
