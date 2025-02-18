@@ -1,8 +1,9 @@
-from dotenv import dotenv_values
+# from dotenv import dotenv_values
 
-# Esto debe ser corrido desde la raíz
-config = dotenv_values(".env")  # config = {"USER": "foo", "EMAIL": "foo@example.org"}
-print (config)
+# # Esto debe ser corrido desde la raíz
+# config = dotenv_values(".env")  # config = {"USER": "foo", "EMAIL": "foo@example.org"}
+# print (config)
+# SENDGRID_API = config["SENDGRID_API"]
 # import sendgrid
 # import os
 # from sendgrid.helpers.mail import *
