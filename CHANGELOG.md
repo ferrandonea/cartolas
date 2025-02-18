@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.2
+## 0.3.0
 ### Agregado
 - Mejora en estructura de carpetas
 - Nueva funcionalidad para guardar los archivos de cartolas por años
@@ -19,3 +19,4 @@ Es en la práctica la primera versión estable
 - Analizar si el parquet de cartolas se puede subir a Azure
 - Hoy no se guardan los nombre de las administradoras por que ocupan demasiado espacio, eso se podría arreglar con otro parquet y un join.
 - Comparador de fondos
+- Dockerizar el proyecto
