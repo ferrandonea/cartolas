@@ -57,7 +57,7 @@ COLUMNAS_RELEVANTES = ["Fondo", "FondoFull", "Moneda", "Run", "Tipoinv", "adm"]
 
 MAX_NUMBER_OF_CATEGORIES = 30
 
-def get_elmer_data(category_id: int) -> dict:
+def get_elmer_data(category_id: int, verbose: bool = False) -> dict:
     url = ELMER_URL_BASE + str(category_id)
     response = requests.get(url)
 
@@ -65,7 +65,7 @@ def get_elmer_data(category_id: int) -> dict:
         datos = response.json()
         datos["num_categoria"] = category_id
     except JSONDecodeError:
-        print(f"Error al obtener los datos de la categoría {category_id}")
+        print(f"Error al obtener los datos de la categoría {category_id}") if verbose else None
         datos = None
     
     return datos
