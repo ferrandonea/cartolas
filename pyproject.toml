@@ -1,6 +1,6 @@
 [project]
 name = "cartolas"
-version = "0.3.0"
+version = "0.2.2"
 description = "Baja cartolas diarias"
 readme = "README.md"
 requires-python = ">=3.11.9"
