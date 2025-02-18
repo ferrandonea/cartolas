@@ -2,8 +2,11 @@ from pathlib import Path
 from datetime import date, datetime, timedelta
 import polars as pl
 
+# Data subfolder
+DATA_FOLDER_NAME = "data"
+
 # Carpeta de este módulo
-CURRENT_FOLDER = Path(__file__).parent
+CURRENT_FOLDER = Path(__file__).parent / DATA_FOLDER_NAME
 
 # Configuración por defecto
 DEFAULT_HEADLESS = True
@@ -12,6 +15,7 @@ URL_CARTOLAS = (
 )
 VERBOSE = True
 TIMEOUT = 500_000
+
 
 IMAGES_FOLDER_NAME = "images"
 IMAGES_FOLDER = CURRENT_FOLDER / IMAGES_FOLDER_NAME
@@ -34,6 +38,10 @@ PARQUET_FOLDER_NAME = "parquet"
 PARQUET_FOLDER = CURRENT_FOLDER / PARQUET_FOLDER_NAME
 PARQUET_FILE_NAME = "cartolas.parquet"
 PARQUET_FILE_PATH = PARQUET_FOLDER / PARQUET_FILE_NAME
+
+# Carpeta donde se guardan los archivos Parquet por año
+PARQUET_FOLDER_YEAR_NAME = "yearly"
+PARQUET_FOLDER_YEAR = CURRENT_FOLDER / PARQUET_FOLDER_YEAR_NAME
 
 # El import es acá para evitar importaciones circulares con file_tools.py
 from utiles.file_tools import generate_hash_image_name  # noqa: E402

@@ -8,7 +8,7 @@ uno por cada año.
 from datetime import date
 from pathlib import Path
 
-from cartolas.config import FECHA_MINIMA, SCHEMA, FECHA_MAXIMA
+from cartolas.config import FECHA_MINIMA, SCHEMA, FECHA_MAXIMA, PARQUET_FOLDER_YEAR
 from cartolas.download import download_cartolas_range
 from cartolas.read import read_parquet_cartolas_lazy
 from cartolas.save import save_lazyframe_to_parquet
@@ -34,7 +34,7 @@ def get_year_parquet_path(year: int, base_dir: Path = Path("cartolas/data")) -> 
 
 @timer
 def update_parquet_by_year(
-    base_dir: Path = Path("cartolas/data"),
+    base_dir: Path = PARQUET_FOLDER_YEAR,
     min_date: date = FECHA_MINIMA,
     max_date: date = FECHA_MAXIMA,
     sleep_time: int = 10,

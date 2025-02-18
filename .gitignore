@@ -1,8 +1,8 @@
 # Imagenes del modelo
-cartolas/images/*/*.png     
+cartolas/data/images/*/*.png     
 
 # Cartolas txt
-cartolas/txt/*.txt
+cartolas/data/txt/*.txt
 
 # Archivos parquet
 *.parquet
