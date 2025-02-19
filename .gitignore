@@ -4,6 +4,9 @@ cartolas/data/images/*/*.png
 # Cartolas txt
 cartolas/data/txt/*.txt
 
+# Json El Mercurio
+cartolas/data/elmer/*.json
+
 # Archivos parquet
 *.parquet
 

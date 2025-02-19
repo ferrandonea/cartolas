@@ -20,3 +20,4 @@ Es en la práctica la primera versión estable
 - Hoy no se guardan los nombre de las administradoras por que ocupan demasiado espacio, eso se podría arreglar con otro parquet y un join.
 - Comparador de fondos
 - Dockerizar el proyecto
+- Dejar todas las funciones en un mismo idioma
