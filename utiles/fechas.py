@@ -1,7 +1,7 @@
 """Utilidades relacionadas con fechas"""
 
 from datetime import date, datetime, timedelta
-
+from typing import Union
 
 def from_date_to_datetime(input_date: datetime | date) -> date:
     """
@@ -104,6 +104,42 @@ def consecutive_date_ranges(
 
     return ranges
 
+def es_mismo_mes(fecha: Union[datetime, str]) -> bool:
+    """
+    Verifica si una fecha dada está en el mismo mes que la fecha actual.
+
+    Args:
+        fecha (Union[datetime, str]): Fecha a comparar. Puede ser un objeto datetime
+            o un string en formato 'YYYY-MM-DD' o 'YYYY-MM-DD HH:MM:SS'
+
+    Returns:
+        bool: True si la fecha está en el mismo mes que la fecha actual, False en caso contrario
+
+    Examples:
+        >>> es_mismo_mes('2024-03-15')  # Si hoy es marzo 2024
+        True
+        >>> es_mismo_mes('2024-02-15')  # Si hoy es marzo 2024
+        False
+        >>> es_mismo_mes(datetime.now())
+        True
+    """
+    try:
+        # Si la fecha es un string, convertirla a datetime
+        if isinstance(fecha, str):
+            try:
+                fecha = datetime.strptime(fecha, '%Y-%m-%d')
+            except ValueError:
+                fecha = datetime.strptime(fecha, '%Y-%m-%d %H:%M:%S')
+        
+        # Obtener fecha actual
+        hoy = datetime.now()
+        
+        # Comparar año y mes
+        return fecha.year == hoy.year and fecha.month == hoy.month
+        
+    except Exception as e:
+        print(f"Error al comparar fechas: {e}")
+        return False
 
 if __name__ == "__main__":
     print("*" * 80)

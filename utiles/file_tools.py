@@ -1,9 +1,11 @@
 """Utilidades de manejo de archivos"""
-
+import json
 import hashlib
 import random
 import string
 from pathlib import Path
+from datetime import datetime
+from typing import Union, Any
 
 HASH_LENGTH = 12
 # Tamaño mínimo de las cartolas
@@ -96,7 +98,106 @@ def clean_txt_folder(
 
     return None
 
+from pathlib import Path
+from typing import Optional
 
+def obtener_archivo_mas_reciente(directorio: Path) -> Optional[Path]:
+    """
+    Encuentra el archivo más recientemente creado en el directorio especificado.
+
+    Args:
+        directorio (Path): Ruta al directorio donde buscar
+
+    Returns:
+        Optional[Path]: Ruta al archivo más reciente, o None si el directorio está vacío
+
+    Examples:
+        >>> directorio = Path("data/parquet")
+        >>> archivo_reciente = obtener_archivo_mas_reciente(directorio)
+        >>> if archivo_reciente:
+        ...     print(f"Archivo más reciente: {archivo_reciente.name}")
+    """
+    try:
+        # Obtener todos los archivos del directorio (no directorios)
+        archivos = [f for f in directorio.iterdir() if f.is_file()]
+        
+        if not archivos:
+            return None
+            
+        # Encontrar el archivo con la fecha de modificación más reciente
+        archivo_reciente = max(archivos, key=lambda x: x.stat().st_mtime)
+        
+        return archivo_reciente
+        
+    except Exception as e:
+        print(f"Error al buscar archivo más reciente: {e}")
+        return None
+
+def obtener_fecha_creacion(archivo: Path) -> Optional[datetime]:
+    """
+    Obtiene la fecha de creación de un archivo.
+
+    Args:
+        archivo (Path): Ruta al archivo del cual queremos obtener la fecha de creación
+
+    Returns:
+        Optional[datetime]: Fecha de creación del archivo, o None si hay error
+
+    Examples:
+        >>> archivo = Path("data/parquet/ejemplo.parquet")
+        >>> fecha = obtener_fecha_creacion(archivo)
+        >>> if fecha:
+        ...     print(f"Archivo creado el: {fecha.strftime('%Y-%m-%d %H:%M:%S')}")
+    """
+    try:
+        # Obtener timestamp de creación y convertirlo a datetime
+        timestamp = archivo.stat().st_ctime
+        fecha_creacion = datetime.fromtimestamp(timestamp)
+        
+        return fecha_creacion
+        
+    except Exception as e:
+        print(f"Error al obtener fecha de creación de {archivo.name}: {e}")
+        return None
+
+def leer_json(ruta_archivo: Union[str, Path]) -> Optional[dict[str, Any]]:
+    """
+    Lee un archivo JSON y retorna su contenido.
+
+    Args:
+        ruta_archivo (Union[str, Path]): Ruta al archivo JSON
+
+    Returns:
+        Optional[Dict[str, Any]]: Contenido del archivo JSON como diccionario,
+            o None si hay error
+
+    Examples:
+        >>> datos = leer_json('config.json')
+        >>> if datos:
+        ...     print(datos['nombre'])
+    """
+    try:
+        # Convertir a Path si es string
+        ruta = Path(ruta_archivo)
+        
+        # Verificar que el archivo existe
+        if not ruta.exists():
+            print(f"El archivo {ruta} no existe")
+            return None
+            
+        # Leer el archivo JSON
+        with ruta.open('r', encoding='utf-8') as archivo:
+            datos = json.load(archivo)
+            
+        return datos
+        
+    except json.JSONDecodeError as e:
+        print(f"Error al decodificar JSON: {e}")
+        return None
+    except Exception as e:
+        print(f"Error al leer archivo: {e}")
+        return None
+    
 if __name__ == "__main__":
     # Genera un nombre de archivo hash de 10 caracteres
     file_name = generate_hash_name() + ".png"
