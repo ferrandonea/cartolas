@@ -41,20 +41,22 @@ def transform_single_cartola(
         raise FileNotFoundError(f"El archivo {txt_cartola} no existe")
 
     # Lee el archivo CSV y aplica las transformaciones necesarias
-    lazy_df = pl.scan_csv(
-        txt_cartola, separator=";", schema_overrides=schema
-    ).with_columns(
-        # Convierte la columna FECHA_INF a tipo Date
-        pl.col("FECHA_INF").str.strptime(pl.Date, "%Y%m%d", strict=False),
-        # Convierte las columnas booleanas
-        *[map_s_n_to_bool(col) for col in boolean_columns],
-        # Reemplaza los valores nulos con uno en las columnas especificadas
-        *[replace_null_with_one(col) for col in null_columns],
-        # Concatena las columnas RUN_FM y SERIE en una nueva columna RUN_FM_SERIE
-        pl.concat_str(
-            [pl.col("RUN_FM").cast(pl.Utf8), pl.lit("-"), pl.col("SERIE")]
-        ).alias("RUN_FM_SERIE"),
-    ).drop(["NOM_ADM"])
+    lazy_df = (
+        pl.scan_csv(txt_cartola, separator=";", schema_overrides=schema)
+        .with_columns(
+            # Convierte la columna FECHA_INF a tipo Date
+            pl.col("FECHA_INF").str.strptime(pl.Date, "%Y%m%d", strict=False),
+            # Convierte las columnas booleanas
+            *[map_s_n_to_bool(col) for col in boolean_columns],
+            # Reemplaza los valores nulos con uno en las columnas especificadas
+            *[replace_null_with_one(col) for col in null_columns],
+            # Concatena las columnas RUN_FM y SERIE en una nueva columna RUN_FM_SERIE
+            pl.concat_str(
+                [pl.col("RUN_FM").cast(pl.Utf8), pl.lit("-"), pl.col("SERIE")]
+            ).alias("RUN_FM_SERIE"),
+        )
+        .drop(["NOM_ADM"])
+    )
     return lazy_df
 
 

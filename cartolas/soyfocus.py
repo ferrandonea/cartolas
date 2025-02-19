@@ -336,7 +336,7 @@ def create_tac_report(
         "PATRIMONIO_AJUSTADO_COSTOS",
         "PATRIMONIO_NETO_ANTERIOR",
     ]
-    
+
     # Si solo se requiere análisis por RUN, elimina la columna SERIE
     if run_only:
         columns.remove("SERIE")
@@ -406,7 +406,7 @@ def create_tac_report(
 
     # Guarda los resultados en formato parquet
     save_lazyframe_to_parquet(lazy_df=lazy_df, filename=soyfocus_tac_file, unique=True)
-    
+
     return lazy_df
 
 
@@ -417,5 +417,3 @@ if __name__ == "__main__":
     lazy_df = soy_focus_by_run(lazy_df)
     tac = create_tac_report(lazy_df, run_only=True)
     tac.collect().tail(10).write_csv("cartolas/csv/soyfocus.csv")
-
-

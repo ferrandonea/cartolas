@@ -8,7 +8,7 @@ uno por cada año.
 from datetime import date
 from pathlib import Path
 
-from cartolas.config import FECHA_MINIMA, SCHEMA, FECHA_MAXIMA, PARQUET_FOLDER_YEAR
+from cartolas.config import FECHA_MINIMA, FECHA_MAXIMA, PARQUET_FOLDER_YEAR
 from cartolas.download import download_cartolas_range
 from cartolas.read import read_parquet_cartolas_lazy
 from cartolas.save import save_lazyframe_to_parquet
@@ -18,6 +18,7 @@ from utiles.decorators import timer
 from utiles.file_tools import clean_txt_folder
 
 import polars as pl
+
 
 def get_year_parquet_path(year: int, base_dir: Path = Path("cartolas/data")) -> Path:
     """
@@ -31,6 +32,7 @@ def get_year_parquet_path(year: int, base_dir: Path = Path("cartolas/data")) -> 
         Path: Ruta completa del archivo parquet para el año especificado
     """
     return base_dir / f"cartolas_{year}.parquet"
+
 
 @timer
 def update_parquet_by_year(
@@ -56,14 +58,14 @@ def update_parquet_by_year(
 
     # Obtiene el rango de años a procesar
     years_range = range(min_date.year, max_date.year + 1)
-    
+
     # Diccionario para almacenar las fechas faltantes por año
     missing_dates_by_year = {}
 
     # Para cada año, verifica las fechas existentes y faltantes
     for year in years_range:
         year_file = get_year_parquet_path(year, base_dir)
-        
+
         # Define el rango de fechas para este año
         year_start = max(date(year, 1, 1), min_date)
         year_end = min(date(year, 12, 31), max_date)
@@ -129,4 +131,4 @@ def update_parquet_by_year(
 
 
 if __name__ == "__main__":
-    update_parquet_by_year() 
+    update_parquet_by_year()

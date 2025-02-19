@@ -3,6 +3,7 @@
 from datetime import date, datetime, timedelta
 from typing import Union
 
+
 def from_date_to_datetime(input_date: datetime | date) -> date:
     """
     Convierte un objeto datetime a date. Si el input ya es un date, lo retorna sin cambios.
@@ -104,6 +105,7 @@ def consecutive_date_ranges(
 
     return ranges
 
+
 def es_mismo_mes(fecha: Union[datetime, str]) -> bool:
     """
     Verifica si una fecha dada está en el mismo mes que la fecha actual.
@@ -127,19 +129,20 @@ def es_mismo_mes(fecha: Union[datetime, str]) -> bool:
         # Si la fecha es un string, convertirla a datetime
         if isinstance(fecha, str):
             try:
-                fecha = datetime.strptime(fecha, '%Y-%m-%d')
+                fecha = datetime.strptime(fecha, "%Y-%m-%d")
             except ValueError:
-                fecha = datetime.strptime(fecha, '%Y-%m-%d %H:%M:%S')
-        
+                fecha = datetime.strptime(fecha, "%Y-%m-%d %H:%M:%S")
+
         # Obtener fecha actual
         hoy = datetime.now()
-        
+
         # Comparar año y mes
         return fecha.year == hoy.year and fecha.month == hoy.month
-        
+
     except Exception as e:
         print(f"Error al comparar fechas: {e}")
         return False
+
 
 if __name__ == "__main__":
     print("*" * 80)

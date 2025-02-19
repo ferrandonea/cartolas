@@ -98,12 +98,7 @@ SCHEMA = {
     "FACTOR DE REPARTO": pl.Float64,
 }
 
-SOYFOCUS_FUNDS = {
-    9809: "MODERADO",
-    9810: "CONSERVADOR",
-    9811: "ARRIESGADO"
-        
-}
+SOYFOCUS_FUNDS = {9809: "MODERADO", 9810: "CONSERVADOR", 9811: "ARRIESGADO"}
 
 # Carpeta donde se guardan los archivos Parquet
 SOYFOCUS_PARQUET_FILE_NAME = "soyfocus.parquet"
@@ -114,4 +109,8 @@ SOYFOCUS_BY_RUN_PARQUET_FILE_PATH = PARQUET_FOLDER / SOYFOCUS_BY_RUN_FILE_NAME
 SOYFOCUS_TAC_PARQUET_FILE_PATH = PARQUET_FOLDER / SOYFOCUS_TAC_FILE_NAME
 
 # COSAS DE MAIL
-SENDER_MAIL, SENDER_NAME, TO_EMAILS = "francisco@soyfocus.com", "Francisco", ["francisco@soyfocus.com"]
+SENDER_MAIL, SENDER_NAME, TO_EMAILS = (
+    "francisco@soyfocus.com",
+    "Francisco",
+    ["francisco@soyfocus.com"],
+)

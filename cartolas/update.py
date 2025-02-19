@@ -17,7 +17,7 @@ from utiles.file_tools import clean_txt_folder
 
 import polars as pl
 
-#FECHA_MAXIMA = date(2014, 1, 11)
+# FECHA_MAXIMA = date(2014, 1, 11)
 
 
 @timer
@@ -55,7 +55,6 @@ def update_parquet(
             .to_series()
             .to_list()
         )
-
 
     else:
         # Si el archivo parquet no existe, crea un LazyFrame vacío con el esquema definido

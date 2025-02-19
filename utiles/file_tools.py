@@ -1,11 +1,13 @@
 """Utilidades de manejo de archivos"""
+
 import json
 import hashlib
 import random
 import string
 from pathlib import Path
 from datetime import datetime
-from typing import Union, Any
+from typing import Union, Any, Optional
+
 
 HASH_LENGTH = 12
 # Tamaño mínimo de las cartolas
@@ -98,8 +100,6 @@ def clean_txt_folder(
 
     return None
 
-from pathlib import Path
-from typing import Optional
 
 def obtener_archivo_mas_reciente(directorio: Path) -> Optional[Path]:
     """
@@ -120,18 +120,19 @@ def obtener_archivo_mas_reciente(directorio: Path) -> Optional[Path]:
     try:
         # Obtener todos los archivos del directorio (no directorios)
         archivos = [f for f in directorio.iterdir() if f.is_file()]
-        
+
         if not archivos:
             return None
-            
+
         # Encontrar el archivo con la fecha de modificación más reciente
         archivo_reciente = max(archivos, key=lambda x: x.stat().st_mtime)
-        
+
         return archivo_reciente
-        
+
     except Exception as e:
         print(f"Error al buscar archivo más reciente: {e}")
         return None
+
 
 def obtener_fecha_creacion(archivo: Path) -> Optional[datetime]:
     """
@@ -153,12 +154,13 @@ def obtener_fecha_creacion(archivo: Path) -> Optional[datetime]:
         # Obtener timestamp de creación y convertirlo a datetime
         timestamp = archivo.stat().st_ctime
         fecha_creacion = datetime.fromtimestamp(timestamp)
-        
+
         return fecha_creacion
-        
+
     except Exception as e:
         print(f"Error al obtener fecha de creación de {archivo.name}: {e}")
         return None
+
 
 def leer_json(ruta_archivo: Union[str, Path]) -> Optional[dict[str, Any]]:
     """
@@ -179,25 +181,26 @@ def leer_json(ruta_archivo: Union[str, Path]) -> Optional[dict[str, Any]]:
     try:
         # Convertir a Path si es string
         ruta = Path(ruta_archivo)
-        
+
         # Verificar que el archivo existe
         if not ruta.exists():
             print(f"El archivo {ruta} no existe")
             return None
-            
+
         # Leer el archivo JSON
-        with ruta.open('r', encoding='utf-8') as archivo:
+        with ruta.open("r", encoding="utf-8") as archivo:
             datos = json.load(archivo)
-            
+
         return datos
-        
+
     except json.JSONDecodeError as e:
         print(f"Error al decodificar JSON: {e}")
         return None
     except Exception as e:
         print(f"Error al leer archivo: {e}")
         return None
-    
+
+
 if __name__ == "__main__":
     # Genera un nombre de archivo hash de 10 caracteres
     file_name = generate_hash_name() + ".png"
