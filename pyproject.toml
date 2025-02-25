@@ -10,4 +10,6 @@ dependencies = [
     "captchapass @ git+https://github.com/ferrandonea/captchapass.git",
     "sendgrid>=6.11.0",
     "python-dotenv>=1.0.1",
+    "bcchapi>=1.1.2",
+    "pyarrow>=19.0.1",
 ]
