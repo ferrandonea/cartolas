@@ -240,7 +240,7 @@ def last_elmer_data(
 def last_elmer_data_as_polars(
     elmerfolder: Path = ELMER_FOLDER, verbose: bool = True
 ) -> list[dict]:
-    return pl.DataFrame(last_elmer_data(elmerfolder=elmerfolder))
+    return pl.DataFrame(last_elmer_data(elmerfolder=elmerfolder)).with_columns(pl.col("RUN_FM").cast(pl.UInt16))
 
 if __name__ == "__main__":
     # Ejecuta la función principal si se corre el script directamente

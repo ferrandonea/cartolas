@@ -416,4 +416,7 @@ if __name__ == "__main__":
     tac = create_tac_report(lazy_df)
     lazy_df = soy_focus_by_run(lazy_df)
     tac = create_tac_report(lazy_df, run_only=True)
-    tac.collect().tail(10).write_csv("cartolas/csv/soyfocus.csv")
+    #tac.collect().tail(10).write_csv("cartolas/csv/soyfocus.csv")
+    df = pl.read_parquet("/Users/franciscoerrandonea/code/cartolas/cartolas/data/parquet/soyfocus.parquet")
+    print(df.columns)
+    print(df.write_csv("/Users/franciscoerrandonea/code/cartolas/cartolas/data/csv/soyfocus.csv"))
