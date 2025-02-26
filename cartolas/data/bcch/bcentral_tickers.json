@@ -1,0 +1,32 @@
+{
+    "UF":{
+       "TICKER":"F073.UFF.PRE.Z.D",
+       "NOMBRE":"Unidad de fomento (UF)",
+       "CARTOLA":"UF"
+    },
+    "DOLAR":{
+       "TICKER":"F073.TCO.PRE.Z.D",
+       "NOMBRE":"Tipo de cambio del dólar observado diario",
+       "CARTOLA":"PROM"
+    },
+    "ORO":{
+       "TICKER":"F019.PPB.PRE.44.D",
+       "NOMBRE":"Precio del oro, dólares la onza troy",
+       "CARTOLA":"ORO"  
+    },
+    "TPM":{
+       "TICKER":"F022.TPM.TIN.D001.NO.Z.D",
+       "NOMBRE":"Tasa de política monetaria (TPM) (porcentaje)",
+       "CARTOLA":"TPM"
+    },
+    "UTM":{
+       "TICKER":"F073.UTR.PRE.Z.M",
+       "NOMBRE":"Unidad tributaria mensual (UTM)",
+       "CARTOLA":"UTM"
+    },
+    "EURO":{
+       "TICKER":"F072.CLP.EUR.N.O.D",
+       "NOMBRE":"Euro en pesos",
+       "CARTOLA":"EUR"
+    }
+ }
