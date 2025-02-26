@@ -223,24 +223,24 @@ def last_elmer_data(
 
     # Si no hay archivo, descargamos datos nuevos
     if not last_archivo:
-        print("Bajando archivo nuevo")
+        print("EMOL: Bajando archivo nuevo")
         return get_and_save_elmer_data()
 
     # Verificamos si el archivo es del mes actual
     last_archivo_date = obtener_fecha_creacion(last_archivo)
     # Si es del mes actual, usamos el archivo existente
     if es_mismo_mes(last_archivo_date):
-        print(f"Usando archivo histórico {last_archivo.stem}")
+        print(f"EMOL: Usando archivo histórico {last_archivo.stem}")
         return leer_json(last_archivo)
 
     # Si el archivo no es del mes actual, descargamos datos nuevos
-    print("Bajando archivo nuevo")
+    print("EMOL: Bajando archivo nuevo")
     return get_and_save_elmer_data()
 
 def last_elmer_data_as_polars(
     elmerfolder: Path = ELMER_FOLDER, verbose: bool = True
 ) -> list[dict]:
-    return pl.DataFrame(last_elmer_data(elmerfolder=elmerfolder)).with_columns(pl.col("RUN_FM").cast(pl.UInt16))
+    return pl.LazyFrame(last_elmer_data(elmerfolder=elmerfolder)).with_columns(pl.col("RUN_FM").cast(pl.UInt16))
 
 if __name__ == "__main__":
     # Ejecuta la función principal si se corre el script directamente
