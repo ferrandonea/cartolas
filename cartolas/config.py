@@ -47,6 +47,10 @@ PARQUET_FOLDER_YEAR = CURRENT_FOLDER / PARQUET_FOLDER_YEAR_NAME
 ELMER_FOLDER_NAME = "elmer"
 ELMER_FOLDER = CURRENT_FOLDER / ELMER_FOLDER_NAME
 
+# Carpeta donde se guardan los archivos Parquet de datos del Banco Central
+BCCH_FOLDER_NAME = "bcch"
+BCCH_FOLDER = CURRENT_FOLDER / BCCH_FOLDER_NAME
+
 # El import es acá para evitar importaciones circulares con file_tools.py
 from utiles.file_tools import generate_hash_image_name  # noqa: E402
 
