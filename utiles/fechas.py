@@ -1,5 +1,6 @@
 """Utilidades relacionadas con fechas"""
 
+import calendar
 from datetime import date, datetime, timedelta
 from typing import Union
 
@@ -144,6 +145,34 @@ def es_mismo_mes(fecha: Union[datetime, str]) -> bool:
         return False
 
 
+def last_day_n_months_ago(input_date: date, n_months: int) -> date:
+    """
+    Devuelve el último día del mes correspondiente a 'n' meses atrás desde la fecha dada.
+    Maneja correctamente los años bisiestos y el ajuste de años cuando 'n' es grande.
+    """
+    # Restar n meses a la fecha actual
+    new_month = input_date.month - n_months
+    new_year = input_date.year
+
+    # Ajustar el año si el mes es negativo o cero
+    while new_month <= 0:
+        new_month += 12
+        new_year -= 1
+
+    # Obtener el último día de ese mes
+    last_day = calendar.monthrange(new_year, new_month)[1]
+
+    return date(new_year, new_month, last_day)
+
+
+def last_day_n_months_ago_by_year(input_date: date, n_years: int) -> date:
+    """
+    Devuelve el último día del mes correspondiente a 'n' años atrás desde la fecha dada.
+    Maneja correctamente los años bisiestos y el ajuste de años cuando 'n' es grande.
+    """
+    return last_day_n_months_ago(input_date, n_years * 12)
+
+
 if __name__ == "__main__":
     print("*" * 80)
     print(f"{date_range.__name__}")
@@ -187,3 +216,22 @@ if __name__ == "__main__":
     rangos = consecutive_date_ranges(date_range(start_date, end_date), days)
     for i, x in enumerate(rangos):
         print(i, x)
+
+    print("*" * 80)
+    print(f"{last_day_n_months_ago.__name__}")
+    fecha = date(2025, 2, 28)
+    print(f"{fecha=}")
+    print(f"{last_day_n_months_ago(fecha, 1) = }")
+    print(f"{last_day_n_months_ago(fecha, 2) = }")
+    print(f"{last_day_n_months_ago(fecha, 3) = }")
+    print(f"{last_day_n_months_ago(fecha, 4) = }")
+    print(f"{last_day_n_months_ago(fecha, 5) = }")
+    print(f"{last_day_n_months_ago(fecha, 6) = }")
+    print(f"{last_day_n_months_ago(fecha, 12) = }")
+    print(f"{last_day_n_months_ago(fecha, 36) = } ")
+
+    print("*" * 80)
+    print(f"{last_day_n_months_ago_by_year.__name__}")
+    print(f"{last_day_n_months_ago_by_year(fecha, 1) = }")
+    print(f"{last_day_n_months_ago_by_year(fecha, 2) = }")
+    print(f"{last_day_n_months_ago_by_year(fecha, 3) = }")
