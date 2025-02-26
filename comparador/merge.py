@@ -1,12 +1,14 @@
-from cartolas.soyfocus import read_parquet_cartolas_lazy
-from cartolas.config import PARQUET_FOLDER_YEAR
 from datetime import datetime, timedelta
+
 import polars as pl
-from .elmer import last_elmer_data_as_polars
-from eco.bcentral import baja_bcch_as_polars, baja_dolar_observado_as_polars ,baja_dolar_y_euro_as_polars
+
+from cartolas.config import PARQUET_FOLDER_YEAR
+from cartolas.soyfocus import read_parquet_cartolas_lazy
+from comparador.elmer import last_elmer_data_as_polars
+from eco.bcentral import update_bcch_for_cartolas
 from utiles.listas import multiply_list
 
-MAX_YEARS = 10
+MAX_YEARS = 5
 MIN_DATE = datetime.now() - timedelta(days=MAX_YEARS * 365)
 COLUMNAS_RELEVANTES = [
     "RUN_ADM",
@@ -37,72 +39,132 @@ SUMA_GASTOS = sum([pl.col(x) for x in COLUMNAS_GASTOS])
 SUMA_COMISIONES = sum([pl.col(x) for x in COLUMNAS_COMISIONES])
 PRODUCTO_FACTORES = multiply_list([pl.col(x) for x in COLUMNAS_FACTORES])
 
-cartola_df = (
-    read_parquet_cartolas_lazy(PARQUET_FOLDER_YEAR)
-    .filter(pl.col("FECHA_INF") >= MIN_DATE)
-    .select(COLUMNAS_RELEVANTES)
-    .with_columns(SUMA_GASTOS.alias("GASTOS_TOTALES"))
-    #.drop(COLUMNAS_GASTOS)
-    .with_columns(SUMA_COMISIONES.alias("COMISIONES_TOTALES"))
-    #.drop(COLUMNAS_COMISIONES)
-    .with_columns(PRODUCTO_FACTORES.alias("PRODUCTO_FACTORES"))
-    #.drop(COLUMNAS_FACTORES)
-    .sort(["RUN_FM", "SERIE", "FECHA_INF"])  # Agregamos SERIE al ordenamiento
-    .with_columns([
-        pl.col("VALOR_CUOTA")
-        .shift(1)
-        .over(["RUN_FM", "SERIE"])  # Agregamos SERIE al particionamiento
-        .alias("VALOR_CUOTA_ANTERIOR")
-    ])
-    .with_columns((pl.col("VALOR_CUOTA")*pl.col("PRODUCTO_FACTORES")).alias("VALOR_CUOTA_AJUSTADO"))
-    .with_columns((pl.col("VALOR_CUOTA_AJUSTADO")/pl.col("VALOR_CUOTA_ANTERIOR")).alias("RENTABILIDAD"))
-    .filter(~pl.col("MONEDA").is_in(["MONEDA NO DEF."])) # Elimino las cartolas que no tienen moneda definida
-)
 
-# Primero veamos qué columnas tenemos
-print (cartola_df.collect().head(5))
+def prepare_cartolas_in_pesos(
+    min_date: datetime = MIN_DATE, relevant_columns: list[str] = COLUMNAS_RELEVANTES
+) -> pl.LazyFrame:
+    """
+    Prepara los datos de cartolas convirtiendo todos los valores monetarios a pesos chilenos.
+    
+    Esta función carga los datos de cartolas, los filtra por fecha, y realiza la conversión
+    de monedas extranjeras a pesos chilenos utilizando datos del Banco Central.
+    También calcula métricas adicionales como gastos totales, comisiones y rentabilidad.
+    
+    Args:
+        min_date: Fecha mínima para filtrar los datos (por defecto, 10 años atrás)
+        relevant_columns: Lista de columnas a seleccionar del dataset original
+        
+    Returns:
+        pl.LazyFrame: DataFrame lazy con los datos procesados y convertidos a pesos
+    """
+    cartola_df = (
+        read_parquet_cartolas_lazy(PARQUET_FOLDER_YEAR)
+        .filter(pl.col("FECHA_INF") >= min_date)
+        .select(relevant_columns)
+        .filter(~pl.col("MONEDA").is_in(["MONEDA NO DEF."]))  # Excluye registros con moneda no definida
+    )
 
-#cartola_df.collect().head(100_000).write_csv("cartolas_con_valor_anterior.csv")
-# Bajo datos del banco central
+    eco_df = (
+        update_bcch_for_cartolas()
+    )  # Datos del banco central, el euro y el dolar, se actualiza al ejecutarse
 
-#print (cartola_df.select("MONEDA").unique().collect())
-#print (cartola_df.filter(~pl.col("MONEDA").is_in(["MONEDA NO DEF."])).collect())
-#print (cartola_df.collect())
-#print (cartola_df.select("MONEDA").unique().collect())
+    # Une los datos de cartolas con los tipos de cambio
+    merged_df = cartola_df.join(
+        eco_df, on=["MONEDA", "FECHA_INF"], how="left"
+    ).with_columns(pl.col("TIPO_CAMBIO").fill_null(1))  # Asume tipo de cambio 1 para valores nulos
 
-#eco_df = baja_bcch_as_polars().lazy()
-eco_df = baja_dolar_y_euro_as_polars().lazy()
-print (eco_df.collect())
-print (eco_df.melt(id_vars=["FECHA_INF"], value_vars=["PROM", "EUR"], variable_name="MONEDA", value_name="VALOR").sort(["FECHA_INF", "MONEDA"]).collect())
-# cartola_df.join(eco_df, on=["FECHA_INF"], how="left").collect().head(100_000).write_csv("cartolas_con_valor_anterior_y_eco.csv")
+    merged_df = (
+        merged_df.with_columns(
+            (SUMA_GASTOS * pl.col("TIPO_CAMBIO")).alias("GASTOS_TOTALES_PESOS")  # Convierte gastos a pesos
+        )
+        .with_columns(
+            (SUMA_COMISIONES * pl.col("TIPO_CAMBIO")).alias("COMISIONES_TOTALES_PESOS")  # Convierte comisiones a pesos
+        )
+        .with_columns(PRODUCTO_FACTORES.alias("PRODUCTO_FACTORES"))  # Calcula el producto de los factores de ajuste
+        .with_columns(
+            (pl.col("VALOR_CUOTA") * pl.col("TIPO_CAMBIO")).alias("VALOR_CUOTA_PESOS")  # Convierte valor cuota a pesos
+        )
+        .sort(["RUN_FM", "SERIE", "FECHA_INF"])  # Ordena para cálculos de cambios diarios
+        .with_columns(
+            [
+                pl.col("VALOR_CUOTA_PESOS")
+                .shift(1)
+                .over(["RUN_FM", "SERIE"])
+                .alias("VALOR_CUOTA_ANTERIOR_PESOS")  # Obtiene el valor de cuota del día anterior
+            ]
+        )
+        .with_columns(
+            (pl.col("VALOR_CUOTA_PESOS") * pl.col("PRODUCTO_FACTORES")).alias(
+                "VALOR_CUOTA_PESOS_AJUSTADO"  # Ajusta el valor de cuota con los factores
+            )
+        )
+        .with_columns(
+            (
+                pl.col("VALOR_CUOTA_PESOS_AJUSTADO")
+                / pl.col("VALOR_CUOTA_ANTERIOR_PESOS")
+            ).alias("RENTABILIDAD_DIARIA_PESOS")  # Calcula la rentabilidad diaria
+        )
+    )
+    return merged_df
 
 
-# print (cartola_df.select("MONEDA").unique().collect())
+def prepare_relevant_categories() -> pl.LazyFrame:
+    """
+    Prepara un DataFrame con las categorías relevantes de fondos desde Elmer.
+    
+    Esta función obtiene los datos más recientes de Elmer, filtra por tipo de inversión
+    retail y categorías específicas, y mapea estas categorías a los RUN_FM de SoyFocus.
+    
+    Returns:
+        pl.LazyFrame: DataFrame lazy con las categorías relevantes mapeadas
+    """
+    columns_to_select = ["RUN_FM", "FONDO", "ADM", "SERIE", "CATEGORIA", "TIPOINV"]
+    tipoinv_filter = "RETAIL / PEQUEÑO INVERSOR"  # Filtro para seleccionar solo inversiones retail
+
+    # Este es un mapping de categorias de elmer a los RUN_FM de cartolas de soyfocus
+    categories_mapping = {
+        "BALANCEADO CONSERVADOR": 9810,
+        "BALANCEADO MODERADO": 9809,
+        "BALANCEADO AGRESIVO": 9811,
+        "DEUDA CORTO PLAZO NACIONAL": 9810,
+    }
+    categories_to_select = list(categories_mapping.keys())
+    
+    # Obtiene los datos de Elmer y aplica los filtros necesarios
+    elmer_df = (
+        last_elmer_data_as_polars()
+        .select(columns_to_select)
+        .filter(pl.col("TIPOINV") == tipoinv_filter)
+        .filter(pl.col("CATEGORIA").is_in(categories_to_select))
+        .with_columns(
+            pl.col("CATEGORIA").replace(categories_mapping).alias("SOY_FOCUS")  # Mapea categorías a RUN_FM
+        )
+    )
+    return elmer_df
 
 
-# cartola_df.filter(pl.col("RUN_FM").is_in([9809,9810,9811])).collect().write_csv("cartolas_con_valor_anterior_y_eco_9809_9810_9811.csv")
-# print(cartola_df.filter(~pl.col("MONEDA").is_in(["$$","PROM"])).collect())
-# cartola_df.filter(~pl.col("MONEDA").is_in(["$$","PROM"])).collect().write_csv("cartolas_con_valor_anterior_y_eco_9809_9810_9811_no_pesos.csv")
-# cartola_df.filter(pl.col("RUN_FM").is_in([10225])).collect().write_csv("cartolas_con_valor_anterior_y_eco_10225.csv")
-# # # Bajo el parquet de elmer de todos los años de todos los fonuvx rdos
+def merge_cartolas_with_categories() -> pl.LazyFrame:
+    """
+    Combina los datos de cartolas en pesos con las categorías de Elmer.
+    
+    Esta función une los datos procesados de cartolas con las categorías relevantes
+    de Elmer, y filtra para mantener solo los registros que tienen una categoría asignada.
+    
+    Returns:
+        pl.LazyFrame: DataFrame lazy con los datos de cartolas enriquecidos con categorías
+    """
+    elmer_df = prepare_relevant_categories()
+    merged_df = prepare_cartolas_in_pesos()
+    
+    # Une los datos de cartolas con las categorías por RUN_FM y SERIE
+    merged_df = merged_df.join(elmer_df, on=["RUN_FM", "SERIE"], how="left")
+    # TODO: Filtrar por categoria no nula en el join
+    
+    # Filtra para mantener solo registros con categoría asignada
+    return merged_df.filter(pl.col("CATEGORIA").is_not_null())
 
 
-# # elmer_df = last_elmer_data_as_polars().lazy()
-
-# # print (elmer_df)
-# # print (elmer_df.collect())
-# # print (elmer_df.columns)
-
-# # # Fusiono los dataframes por RUN_FM y SERIE
-# # merged_df = cartola_df.join(elmer_df, on=["RUN_FM","SERIE"], how="left")
-
-# # print (merged_df.columns)
-# # print (merged_df.collect())
-
-
-# # #merged_df = df.join(elmer_df, on=["RUN_FM","SERIE"], how="left").select(["RUN_FM","SERIE","TIPOINV"]).filter(pl.col("TIPOINV").is_in(["RETAIL / PEQUEÑO INVERSOR"]))
-# # #print (merged_df.columns)
-# # #print (merged_df.collect())
-# # df = baja_bcch_as_polars()
-# # print (df.columns)
-# # print (df)
+if __name__ == "__main__":
+    df = merge_cartolas_with_categories()
+    print(df.collect())  # Materializa el DataFrame lazy y muestra los resultados
+    print (df.collect().columns)
