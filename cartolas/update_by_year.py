@@ -39,7 +39,7 @@ def update_parquet_by_year(
     base_dir: Path = PARQUET_FOLDER_YEAR,
     min_date: date = FECHA_MINIMA,
     max_date: date = FECHA_MAXIMA,
-    sleep_time: int = 10,
+    sleep_time: int = 1,
 ) -> None:
     """
     Actualiza los datos de las cartolas en archivos Parquet separados por año.
