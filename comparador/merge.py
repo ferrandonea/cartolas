@@ -8,7 +8,7 @@ from comparador.elmer import last_elmer_data_as_polars
 from eco.bcentral import update_bcch_for_cartolas
 from utiles.listas import multiply_list
 
-MAX_YEARS = 5
+MAX_YEARS = 6
 MIN_DATE = datetime.now() - timedelta(days=MAX_YEARS * 365)
 COLUMNAS_RELEVANTES = [
     "RUN_ADM",
@@ -99,10 +99,35 @@ def prepare_cartolas_in_pesos(
             )
         )
         .with_columns(
-            (
+            ((
                 pl.col("VALOR_CUOTA_PESOS_AJUSTADO")
                 / pl.col("VALOR_CUOTA_ANTERIOR_PESOS")
-            ).alias("RENTABILIDAD_DIARIA_PESOS")  # Calcula la rentabilidad diaria
+            ).fill_nan(1).fill_null(1)).alias("RENTABILIDAD_DIARIA_PESOS")  # Calcula la rentabilidad diaria
+        )
+        .with_columns(
+            (pl.col("CUOTAS_APORTADAS") - pl.col("CUOTAS_RESCATADAS")).alias("DELTA_CUOTAS")
+        )
+        .with_columns(
+            (pl.col("DELTA_CUOTAS") * pl.col("VALOR_CUOTA_PESOS_AJUSTADO")).alias("FLUJO_PESOS")
+        )
+        .with_columns(
+            (pl.col("CUOTAS_EN_CIRCULACION") * pl.col("VALOR_CUOTA_PESOS_AJUSTADO")).alias("PATRIMONIO_PESOS")
+        )
+        .with_columns(
+            [
+                pl.col("PATRIMONIO_PESOS")
+                .shift(1)
+                .over(["RUN_FM", "SERIE"])
+                .fill_nan(0)
+                .fill_null(0)
+                .alias("PATRIMONIO_ANTERIOR_PESOS")  # Obtiene el valor de cuota del día anterior
+            ]
+        )
+        .with_columns(
+            (pl.col("PATRIMONIO_PESOS") - pl.col("PATRIMONIO_ANTERIOR_PESOS")).alias("DELTA_PATRIMONIO_PESOS")
+        )
+        .with_columns(
+            (pl.col("DELTA_PATRIMONIO_PESOS") - pl.col("FLUJO_PESOS")).alias("UTILIDAD_PESOS")
         )
     )
     return merged_df
@@ -139,6 +164,7 @@ def prepare_relevant_categories() -> pl.LazyFrame:
         .with_columns(
             pl.col("CATEGORIA").replace(categories_mapping).alias("SOY_FOCUS")  # Mapea categorías a RUN_FM
         )
+        .drop("TIPOINV")
     )
     return elmer_df
 
@@ -168,3 +194,4 @@ if __name__ == "__main__":
     df = merge_cartolas_with_categories()
     print(df.collect())  # Materializa el DataFrame lazy y muestra los resultados
     print (df.collect().columns)
+    df.collect().write_csv("cartolas.csv")
