@@ -98,6 +98,100 @@ if __name__ == "__main__":
 
     pprint.pprint(generate_cla_dates(input_date))
     df = generate_cla_data()
-    print(df.filter(pl.col("RUN_FM") == 9811))
+    print(df)
 
 
+    df = (
+        df.sort(["RUN_FM", "SERIE", "FECHA_INF"])
+        .with_columns([
+            pl.col("RENTABILIDAD_ACUMULADA")
+                .reverse()
+                .first()
+                .over(["RUN_FM", "SERIE"])
+                .alias("RENT_ACUM_ULTIMA")
+        ])
+        .with_columns([
+            (pl.col("RENT_ACUM_ULTIMA") / pl.col("RENTABILIDAD_ACUMULADA"))
+                .alias("RENTABILIDAD_HASTA_FECHA")
+        ])
+    )
+    print(df)
+    df.write_csv("cla_data.csv")
+    
+    promedios = (
+    df.group_by(["FECHA_INF", "CATEGORIA"])
+      .agg([
+            pl.col("RENTABILIDAD_HASTA_FECHA").mean().alias("PROMEDIO_RENTABILIDAD_HASTA_FECHA")
+        ])
+        .sort(["CATEGORIA", "FECHA_INF"])
+    )
+    print(promedios)
+
+    promedios = (
+    df.group_by(["FECHA_INF", "CATEGORIA"])
+      .agg([
+          pl.col("RENTABILIDAD_HASTA_FECHA").mean().alias("PROMEDIO_RENTABILIDAD_HASTA_FECHA"),
+            pl.struct(["RUN_FM", "SERIE"]).n_unique().alias("NUM_FONDOS_SERIES")
+        ]
+    ))
+    print(promedios)
+
+    # Mapping de benchmarks: categoría -> (RUN_FM, SERIE)
+    categories_mapping = {
+        "BALANCEADO CONSERVADO": (9810, "B"),
+        "BALANCEADO MODERADO": (9809, "B"),
+        "BALANCEADO AGRESIVO": (9811, "B"),
+    }
+
+    # Crear un DataFrame con los benchmarks
+    bench_df = pl.DataFrame([
+        {"RUN_FM": run, "SERIE": serie, "CATEGORIA": categoria}
+        for categoria, (run, serie) in categories_mapping.items()
+    ])
+
+    # Asegurar que RUN_FM tenga el mismo tipo en ambos DataFrames
+    df = df.with_columns([
+        pl.col("RUN_FM").cast(pl.Int64)
+    ])
+    bench_df = bench_df.with_columns([
+        pl.col("RUN_FM").cast(pl.Int64)
+    ])
+
+    # Calcular el ranking dentro de cada CATEGORIA y FECHA_INF
+    df_ranked = (
+        df.sort("RENTABILIDAD_HASTA_FECHA", descending=True)
+        .with_columns([
+            pl.col("RENTABILIDAD_HASTA_FECHA")
+                .rank("dense", descending=True)
+                .over(["CATEGORIA", "FECHA_INF"])
+                .alias("RANK_EN_CATEGORIA"),
+            pl.count()
+                .over(["CATEGORIA", "FECHA_INF"])
+                .alias("TOTAL_FONDOS_EN_CATEGORIA")
+        ])
+    )
+
+    # Filtrar benchmarks y obtener su posición
+    bench_ranks = (
+        df_ranked.join(bench_df, on=["RUN_FM", "SERIE", "CATEGORIA"], how="inner")
+                .select([
+                    "FECHA_INF", 
+                    "CATEGORIA", 
+                    "RUN_FM", 
+                    "SERIE", 
+                    "RANK_EN_CATEGORIA", 
+                    "TOTAL_FONDOS_EN_CATEGORIA"
+                ])
+                .sort(["CATEGORIA", "FECHA_INF"])
+    )
+    print (bench_ranks)
+    
+    # Unir promedios con los rankings de benchmark
+    promedios_completo = (
+        promedios.join(
+            bench_ranks, 
+            on=["CATEGORIA", "FECHA_INF"], 
+            how="left"
+        )
+    )
+    print(promedios_completo)
