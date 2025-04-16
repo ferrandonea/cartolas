@@ -198,7 +198,10 @@ def prepare_relevant_categories() -> pl.LazyFrame:
         .with_columns(
             pl.col("CATEGORIA")
             .replace(categories_mapping)
-            .alias("SOY_FOCUS")  # Mapea categorías a RUN_FM
+            .alias("RUN_SOYFOCUS")  # Mapea categorías a RUN_FM
+        )
+        .with_columns(
+            pl.lit("B").alias("SERIE_SOYFOCUS") #Porque en este caso se va a comparar con la B, esto se puede mejorar para APV y otros
         )
         .drop("TIPOINV")
     )

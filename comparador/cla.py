@@ -14,7 +14,7 @@ CATEGORIAS_CLA = ["CONSERVADOR", "MODERADO", "AGRESIVO"]
 CATEGORIAS_EM = [f"BALANCEADO {categoria}" for categoria in CATEGORIAS_CLA]
 
 
-def generate_cla_dates(input_date: date) -> dict[int, date]:
+def generate_cla_dates(input_date: date = date.today()) -> dict[int, date]:
     """
     Genera un diccionario de fechas clave (CLA) a partir de una fecha base.
 
@@ -25,7 +25,7 @@ def generate_cla_dates(input_date: date) -> dict[int, date]:
         dict[int, date]: Diccionario con claves en meses/años y fechas correspondientes.
     """
     current_report_date = ultimo_dia_mes_anterior(input_date)
-
+    print (f"{current_report_date = }")
     cla_dates = {
         **{mes: date_n_months_ago(mes, current_report_date) for mes in MESES_CLA},
         **{año * 12: date_n_years_ago(año, current_report_date) for año in AÑOS_CLA},
@@ -36,10 +36,7 @@ def generate_cla_dates(input_date: date) -> dict[int, date]:
     return cla_dates
 
 
-print(generate_cla_dates(date(2025, 4, 15)))
-
-
-def generate_cla_data():
+def generate_cla_data(input_date: date = date.today()) ->pl.DataFrame:
     RELEVANT_COLUMNS = [
         "RUN_FM",
         "SERIE",
@@ -57,7 +54,7 @@ def generate_cla_data():
     df = df.collect().select(RELEVANT_COLUMNS)
     # filtro las fechas relevantes
     df = df.filter(
-        pl.col("FECHA_INF").is_in(list(generate_cla_dates(date(2025, 4, 15)).values()))
+        pl.col("FECHA_INF").is_in(list(generate_cla_dates(input_date=input_date).values()))
     )
     return df
 
@@ -98,9 +95,9 @@ if __name__ == "__main__":
 
     pprint.pprint(generate_cla_dates(input_date))
     df = generate_cla_data()
-    print(df)
 
 
+    # Esto genera las rentabilidades de cada fondo por período
     df = (
         df.sort(["RUN_FM", "SERIE", "FECHA_INF"])
         .with_columns([
@@ -115,8 +112,9 @@ if __name__ == "__main__":
                 .alias("RENTABILIDAD_HASTA_FECHA")
         ])
     )
-    print(df)
+
     df.write_csv("cla_data.csv")
+    #Hasta acá está bien
     
     promedios = (
     df.group_by(["FECHA_INF", "CATEGORIA"])
@@ -126,6 +124,7 @@ if __name__ == "__main__":
         .sort(["CATEGORIA", "FECHA_INF"])
     )
     print(promedios)
+    
 
     promedios = (
     df.group_by(["FECHA_INF", "CATEGORIA"])
@@ -135,7 +134,8 @@ if __name__ == "__main__":
         ]
     ))
     print(promedios)
-
+    promedios.write_csv("promedios.csv")
+    
     # Mapping de benchmarks: categoría -> (RUN_FM, SERIE)
     categories_mapping = {
         "BALANCEADO CONSERVADO": (9810, "B"),
