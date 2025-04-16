@@ -1,7 +1,7 @@
 """Transforma y ordena los datos de las cartolas descargadas."""
 
 import polars as pl
-from .polars import map_s_n_to_bool, replace_null_with_one
+from .polars_utils import map_s_n_to_bool, replace_null_with_one
 from pathlib import Path
 from .config import (
     SCHEMA,

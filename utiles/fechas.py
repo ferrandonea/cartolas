@@ -1,8 +1,8 @@
 """Utilidades relacionadas con fechas"""
 
-import calendar
 from datetime import date, datetime, timedelta
 from typing import Union
+from dateutil.relativedelta import relativedelta
 
 
 def from_date_to_datetime(input_date: datetime | date) -> date:
@@ -145,32 +145,103 @@ def es_mismo_mes(fecha: Union[datetime, str]) -> bool:
         return False
 
 
-def last_day_n_months_ago(input_date: date, n_months: int) -> date:
+def date_n_months_ago(n: int, base_date: date = None) -> date:
     """
-    Devuelve el último día del mes correspondiente a 'n' meses atrás desde la fecha dada.
-    Maneja correctamente los años bisiestos y el ajuste de años cuando 'n' es grande.
+    Calcula la fecha que estaba hace n meses atrás desde hoy.
+
+    Args:
+        n (int): Número de meses a restar desde la fecha actual.
+            Debe ser un número entero positivo.
+
+    Returns:
+        date: Fecha resultante después de restar n meses a la fecha actual.
+
+    Examples:
+        >>> date_n_months_ago(1)  # Si hoy es 2024-03-15
+        datetime.date(2024, 2, 15)
+        >>> date_n_months_ago(12)  # Si hoy es 2024-03-15
+        datetime.date(2023, 3, 15)
+
+    Note:
+        - Usa relativedelta para manejar correctamente el cambio de meses
+        - Considera agregar validación para n > 0
+        - Podría ser útil agregar un parámetro opcional para la fecha base
+          en lugar de siempre usar today()
     """
-    # Restar n meses a la fecha actual
-    new_month = input_date.month - n_months
-    new_year = input_date.year
-
-    # Ajustar el año si el mes es negativo o cero
-    while new_month <= 0:
-        new_month += 12
-        new_year -= 1
-
-    # Obtener el último día de ese mes
-    last_day = calendar.monthrange(new_year, new_month)[1]
-
-    return date(new_year, new_month, last_day)
+    if base_date is None:
+        base_date = date.today()  # Si no se provee fecha base, usar hoy
+    n_months_ago = base_date - relativedelta(
+        months=n
+    )  # Restar n meses usando relativedelta
+    return n_months_ago  # Retornar la fecha resultante
 
 
-def last_day_n_months_ago_by_year(input_date: date, n_years: int) -> date:
+def date_n_years_ago(n: int, base_date: date = None) -> date:
     """
-    Devuelve el último día del mes correspondiente a 'n' años atrás desde la fecha dada.
-    Maneja correctamente los años bisiestos y el ajuste de años cuando 'n' es grande.
+    Calcula la fecha que estaba hace n años atrás desde una fecha base.
+
+    Args:
+        n (int): Número de años a restar desde la fecha base.
+            Debe ser un número entero positivo.
+        base_date (date, opcional): Fecha base desde la cual restar los años.
+            Si no se proporciona, se usa la fecha actual.
+
+    Returns:
+        date: Fecha resultante después de restar n años a la fecha base.
+
+    Examples:
+        >>> date_n_years_ago(1)  # Si hoy es 2024-03-15
+        datetime.date(2023, 3, 15)
+        >>> date_n_years_ago(5, date(2024, 3, 15))
+        datetime.date(2019, 3, 15)
     """
-    return last_day_n_months_ago(input_date, n_years * 12)
+    # Convertir años a meses (1 año = 12 meses)
+    months = n * 12
+    # Reutilizar la función date_n_months_ago
+    return date_n_months_ago(months, base_date)
+
+
+def ultimo_dia_año_anterior(base_date: date = None) -> date:
+    """
+    Calcula el último día del año anterior (31 de diciembre) a partir de una fecha base.
+
+    Args:
+        base_date (date, opcional): Fecha base desde la cual calcular el último día del año anterior.
+            Si no se proporciona, se usa la fecha actual.
+
+    Returns:
+        date: Fecha del último día del año anterior (31 de diciembre).
+
+    Examples:
+        >>> ultimo_dia_año_anterior()  # Si hoy es 2024-03-15
+        datetime.date(2023, 12, 31)
+        >>> ultimo_dia_año_anterior(date(2025, 6, 10))
+        datetime.date(2024, 12, 31)
+    """
+    if base_date is None:
+        base_date = date.today()
+
+    # Obtener el año de la fecha base
+    año_actual = base_date.year
+    # El último día del año anterior es el 31 de diciembre del año anterior
+    return date(año_actual - 1, 12, 31)
+
+
+def ultimo_dia_mes_anterior(base_date: date = None) -> date:
+    """
+    Devuelve el último día del mes anterior a partir de una fecha base.
+
+    Args:
+        base_date (date, optional): Fecha base. Si no se entrega, se usa la fecha actual.
+
+    Returns:
+        date: Último día del mes anterior.
+    """
+    if base_date is None:
+        base_date = date.today()
+
+    # Ir al primer día del mes actual y restar un día
+    return base_date.replace(day=1) - timedelta(days=1)
 
 
 if __name__ == "__main__":
@@ -218,20 +289,19 @@ if __name__ == "__main__":
         print(i, x)
 
     print("*" * 80)
-    print(f"{last_day_n_months_ago.__name__}")
-    fecha = date(2025, 2, 28)
-    print(f"{fecha=}")
-    print(f"{last_day_n_months_ago(fecha, 1) = }")
-    print(f"{last_day_n_months_ago(fecha, 2) = }")
-    print(f"{last_day_n_months_ago(fecha, 3) = }")
-    print(f"{last_day_n_months_ago(fecha, 4) = }")
-    print(f"{last_day_n_months_ago(fecha, 5) = }")
-    print(f"{last_day_n_months_ago(fecha, 6) = }")
-    print(f"{last_day_n_months_ago(fecha, 12) = }")
-    print(f"{last_day_n_months_ago(fecha, 36) = } ")
+    print(f"{date_n_months_ago.__name__}")
+    print(date_n_months_ago(1))
+    print(date_n_months_ago(1, date(2024, 3, 15)))
+    print(date_n_months_ago(1, date(2024, 12, 15)))
 
     print("*" * 80)
-    print(f"{last_day_n_months_ago_by_year.__name__}")
-    print(f"{last_day_n_months_ago_by_year(fecha, 1) = }")
-    print(f"{last_day_n_months_ago_by_year(fecha, 2) = }")
-    print(f"{last_day_n_months_ago_by_year(fecha, 3) = }")
+    print(f"{date_n_years_ago.__name__}")
+    print(date_n_years_ago(1))
+    print(date_n_years_ago(5, date(2024, 3, 15)))
+    print(date_n_years_ago(10, date(2024, 12, 15)))
+
+    print("*" * 80)
+    print(f"{ultimo_dia_año_anterior.__name__}")
+    print(ultimo_dia_año_anterior())
+    print(ultimo_dia_año_anterior(date(2025, 6, 10)))
+    print(ultimo_dia_año_anterior(date(2020, 1, 1)))

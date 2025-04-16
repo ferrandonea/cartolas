@@ -237,15 +237,19 @@ def last_elmer_data(
     print("EMOL: Bajando archivo nuevo")
     return get_and_save_elmer_data()
 
+
 def last_elmer_data_as_polars(
     elmerfolder: Path = ELMER_FOLDER, verbose: bool = True
 ) -> list[dict]:
-    return pl.LazyFrame(last_elmer_data(elmerfolder=elmerfolder)).with_columns(pl.col("RUN_FM").cast(pl.UInt16))
+    return pl.LazyFrame(last_elmer_data(elmerfolder=elmerfolder)).with_columns(
+        pl.col("RUN_FM").cast(pl.UInt16)
+    )
+
 
 if __name__ == "__main__":
     # Ejecuta la función principal si se corre el script directamente
     print(last_elmer_data())
     df = last_elmer_data_as_polars()
-    print (df.columns)
-    print (df.tail())
-    print (df.select("TIPOINV").unique())
+    print(df.columns)
+    print(df.tail())
+    print(df.select("TIPOINV").unique())
