@@ -4,6 +4,7 @@
 ### Agregado
 - Mejora en estructura de carpetas
 - Nueva funcionalidad para guardar los archivos de cartolas por años
+- Funcionalidad para output de CLA
 
 ## 0.2.1
 ### Agregado
