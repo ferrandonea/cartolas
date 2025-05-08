@@ -378,13 +378,15 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
 
     # Formatos
     azul = writer.book.add_format({'bg_color': '#6161ff', 'font_color': 'white', 'bold': True, 'align': 'left', 'font_name': 'Infra'})
-    negrita = writer.book.add_format({'bold': True, 'font_name': 'Infra', 'align': 'left'})
-    normal = writer.book.add_format({'font_name': 'Infra', 'align': 'right'})
-    porcentaje = writer.book.add_format({'num_format': '0.0%', 'font_name': 'Infra', 'align': 'right'})
-    porcentaje_bold = writer.book.add_format({'num_format': '0.0%', 'bold': True, 'font_name': 'Infra', 'align': 'right'})
-    porcentaje_verde = writer.book.add_format({'num_format': '0.0%', 'font_color': '#008000', 'font_name': 'Infra', 'align': 'right'})
-    porcentaje_rojo = writer.book.add_format({'num_format': '0.0%', 'font_color': '#C00000', 'font_name': 'Infra', 'align': 'right'})
+    negrita = writer.book.add_format({'bold': True, 'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
+    normal = writer.book.add_format({'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
+    porcentaje = writer.book.add_format({'num_format': '0.0%', 'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
+    porcentaje_bold = writer.book.add_format({'num_format': '0.0%', 'bold': True, 'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
+    porcentaje_verde = writer.book.add_format({'num_format': '0.0%', 'font_color': '#008000', 'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
+    porcentaje_rojo = writer.book.add_format({'num_format': '0.0%', 'font_color': '#C00000', 'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
     vacio = writer.book.add_format({'bg_color': '#FFFFFF'})
+    col_a = writer.book.add_format({'font_name': 'Infra', 'align': 'left', 'bg_color': '#FFFFFF'})
+    col_a_bold = writer.book.add_format({'font_name': 'Infra', 'align': 'left', 'bg_color': '#FFFFFF', 'bold': True})
 
     # Estructura
     periodos = ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y"]
@@ -412,8 +414,13 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
         for col in range(1, len(periodos)+1):
             worksheet.write(row, col, "", azul)
         row += 1
+        # Encabezado de períodos
+        worksheet.write(row, 0, "", azul)
+        for j, per in enumerate(periodos):
+            worksheet.write(row, j+1, per, azul)
+        row += 1
         # Fondo Focus (negrita, porcentaje)
-        worksheet.write(row, 0, fondo, negrita)
+        worksheet.write(row, 0, fondo, col_a_bold)
         for j, per in enumerate(periodos):
             val = df_cat.loc[df_cat["PERIODO"] == per, "RENTABILIDAD_PERIODO_SOYFOCUS"]
             if not val.empty and pd.notnull(val.values[0]):
@@ -422,19 +429,19 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
                 worksheet.write(row, j+1, "", vacio)
         row += 1
         # Ranking vs Comparables
-        worksheet.write(row, 0, "Ranking vs Comparables", normal)
+        worksheet.write(row, 0, "Ranking vs Comparables", col_a)
         for j, per in enumerate(periodos):
             val = df_cat.loc[df_cat["PERIODO"] == per, "POSICION_SOYFOCUS"]
             worksheet.write(row, j+1, int(val.values[0]) if not val.empty and pd.notnull(val.values[0]) else "", normal)
         row += 1
         # Total Comparables
-        worksheet.write(row, 0, "Total Comparables", normal)
+        worksheet.write(row, 0, "Total Comparables", col_a)
         for j, per in enumerate(periodos):
             val = df_cat.loc[df_cat["PERIODO"] == per, "NUM_SERIES"]
             worksheet.write(row, j+1, int(val.values[0]) if not val.empty and pd.notnull(val.values[0]) else "", normal)
         row += 1
         # Rentabilidad Promedio Comparables (porcentaje)
-        worksheet.write(row, 0, "Rentabilidad Promedio Comparables", normal)
+        worksheet.write(row, 0, "Rentabilidad Promedio Comparables", col_a)
         for j, per in enumerate(periodos):
             val = df_cat.loc[df_cat["PERIODO"] == per, "RENTABILIDAD_PROMEDIO"]
             if not val.empty and pd.notnull(val.values[0]):
@@ -443,7 +450,7 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
                 worksheet.write(row, j+1, "", vacio)
         row += 1
         # Delta vs Comparables (porcentaje, verde/rojo)
-        worksheet.write(row, 0, "Delta vs Comparables", normal)
+        worksheet.write(row, 0, "Delta vs Comparables", col_a)
         for j, per in enumerate(periodos):
             val = df_cat.loc[df_cat["PERIODO"] == per, "DELTA_VS_COMPARABLES"]
             if not val.empty and pd.notnull(val.values[0]):

@@ -188,3 +188,6 @@ cython_debug/
 # MAC Stuff
 .DS_Store
 rentabilidades_acumuladas.csv
+
+# Ignorar todo el contenido de cla_mensual
+cla_mensual/
