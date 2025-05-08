@@ -239,192 +239,6 @@ def add_category_statistics(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFram
     return df_with_stats, df_stats
 
 @timer
-def create_summary_table(df_stats: pl.DataFrame) -> pd.DataFrame:
-    """
-    Genera una tabla resumen tipo bloque por categoría, con los principales indicadores como filas y los períodos como columnas,
-    siguiendo el formato visual de la imagen de ejemplo del usuario.
-
-    Args:
-        df_stats (pl.DataFrame): DataFrame de estadísticas por categoría y fecha (paso 8), con columna PERIODO
-
-    Returns:
-        pd.DataFrame: Tabla resumen lista para exportar a Excel
-    """
-    # Orden y nombres de los indicadores
-    indicadores = [
-        ("RENTABILIDAD_PERIODO_SOYFOCUS", "Fondo {cat} Focus", True),
-        ("POSICION_SOYFOCUS", "Ranking vs Comparables", False),
-        ("NUM_SERIES", "Total Comparables", False),
-        ("RENTABILIDAD_PROMEDIO", "Rentabilidad Promedio Comparables", True),
-        ("DELTA_VS_COMPARABLES", "Delta vs comparables", True)
-    ]
-    # Orden de los períodos
-    periodos_orden = ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y"]
-    # Calcular Delta vs comparables si no existe
-    if "DELTA_VS_COMPARABLES" not in df_stats.columns:
-        df_stats = df_stats.with_columns([
-            (pl.col("RENTABILIDAD_PERIODO_SOYFOCUS") - pl.col("RENTABILIDAD_PROMEDIO")).alias("DELTA_VS_COMPARABLES")
-        ])
-    df_pd = df_stats.to_pandas()
-    # Asegurar que los períodos estén como string
-    df_pd["PERIODO"] = df_pd["PERIODO"].astype(str)
-    # Lista para bloques
-    bloques = []
-    categorias = df_pd["CATEGORIA"].unique()
-    for cat in categorias:
-        bloque = []
-        df_cat = df_pd[df_pd["CATEGORIA"] == cat]
-        # Diccionario temporal para guardar las rentabilidades transformadas por período
-        rent_soyfocus = {}
-        rent_promedio = {}
-        for col, nombre, es_rentabilidad in indicadores:
-            # Ajuste especial para la categoría agresivo
-            if col == "RENTABILIDAD_PERIODO_SOYFOCUS" and cat.upper() == "BALANCEADO AGRESIVO":
-                nombre_fila = "Fondo Focus Arriesgado"
-            else:
-                nombre_fila = nombre.replace("{cat}", cat.split()[-1].capitalize())
-            fila = [nombre_fila]
-            for per in periodos_orden:
-                val = df_cat.loc[df_cat["PERIODO"] == per, col]
-                if not val.empty:
-                    v = val.values[0]
-                    if es_rentabilidad and pd.notnull(v):
-                        try:
-                            v = float(v) - 1
-                        except Exception:
-                            v = np.nan
-                        # Guardar para delta si corresponde
-                        if col == "RENTABILIDAD_PERIODO_SOYFOCUS":
-                            rent_soyfocus[per] = v
-                        if col == "RENTABILIDAD_PROMEDIO":
-                            rent_promedio[per] = v
-                    fila.append(v)
-                else:
-                    fila.append(np.nan)
-            bloque.append(fila)
-        # Corregir la fila de delta: recalcular como diferencia de las filas ya transformadas
-        idx_delta = 4  # Es la quinta fila
-        for i, per in enumerate(periodos_orden):
-            v_soy = rent_soyfocus.get(per, np.nan)
-            v_prom = rent_promedio.get(per, np.nan)
-            bloque[idx_delta][i+1] = v_soy - v_prom if pd.notnull(v_soy) and pd.notnull(v_prom) else np.nan
-        # Crear DataFrame del bloque
-        df_bloque = pd.DataFrame(
-            bloque,
-            columns=["", *periodos_orden]
-        )
-        # Insertar título de categoría como fila superior
-        titulo = pd.DataFrame([[cat.upper()] + ["" for _ in periodos_orden]], columns=df_bloque.columns)
-        # Concatenar título, bloque y fila vacía
-        bloques.append(titulo)
-        bloques.append(df_bloque)
-        bloques.append(pd.DataFrame([["" for _ in df_bloque.columns]], columns=df_bloque.columns))
-    # Concatenar todos los bloques
-    tabla_final = pd.concat(bloques, ignore_index=True)
-    return tabla_final
-
-def get_summary_dict(df_stats: pl.DataFrame) -> dict:
-    """
-    Genera un diccionario limpio por categoría, período e indicador a partir del DataFrame de estadísticas.
-    """
-    periodos_orden = ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y"]
-    categorias_orden = [
-        ("BALANCEADO CONSERVADOR", "Fondo Conservador Focus"),
-        ("BALANCEADO MODERADO", "Fondo Moderado Focus"),
-        ("BALANCEADO AGRESIVO", "Fondo Focus Arriesgado")
-    ]
-    indicadores = [
-        ("Fondo", "RENTABILIDAD_PERIODO_SOYFOCUS"),
-        ("Ranking vs Comparables", "POSICION_SOYFOCUS"),
-        ("Total Comparables", "NUM_SERIES"),
-        ("Rentabilidad Promedio Comparables", "RENTABILIDAD_PROMEDIO"),
-        ("Delta vs comparables", "DELTA_VS_COMPARABLES")
-    ]
-    df_pd = df_stats.to_pandas()
-    summary = {}
-    for cat, fondo in categorias_orden:
-        summary[cat] = {ind[0]: [] for ind in indicadores}
-        for per in periodos_orden:
-            row = df_pd[(df_pd["CATEGORIA"] == cat) & (df_pd["PERIODO"] == per)]
-            for label, col in indicadores:
-                if label == "Fondo":
-                    val = row["RENTABILIDAD_PERIODO_SOYFOCUS"].values[0] if not row.empty else None
-                else:
-                    val = row[col].values[0] if not row.empty else None
-                summary[cat][label].append(val)
-    return summary
-
-def format_summary_sheet(writer, df_stats, sheet_name="10 Formateado"):
-    """
-    Escribe la hoja 10 usando solo el resumen estructurado, bloque por bloque, perfectamente alineada y formateada.
-    """
-    worksheet = writer.sheets[sheet_name]
-    workbook = writer.book
-    # Formatos base
-    base_fmt = workbook.add_format({'font_name': 'Infra', 'bg_color': '#FFFFFF', 'align': 'right'})
-    left_fmt = workbook.add_format({'font_name': 'Infra', 'bg_color': '#FFFFFF', 'align': 'left'})
-    blue = workbook.add_format({'bg_color': '#6161ff', 'font_color': 'white', 'bold': True, 'font_name': 'Infra'})
-    percent = workbook.add_format({'num_format': '0.0%', 'align': 'right', 'font_name': 'Infra', 'bg_color': '#FFFFFF'})
-    normal = workbook.add_format({'align': 'right', 'font_name': 'Infra', 'bg_color': '#FFFFFF'})
-    percent_bold_underline = workbook.add_format({'num_format': '0.0%', 'bold': True, 'bottom': 2, 'font_name': 'Infra', 'bg_color': '#FFFFFF'})
-    percent_green = workbook.add_format({'num_format': '0.0%', 'font_color': '#008000', 'font_name': 'Infra', 'bg_color': '#FFFFFF'})
-    percent_red = workbook.add_format({'num_format': '0.0%', 'font_color': '#C00000', 'font_name': 'Infra', 'bg_color': '#FFFFFF'})
-    # Orden de bloques y nombres de fondo
-    orden_bloques = [
-        ("BALANCEADO CONSERVADOR", "Fondo Conservador Focus"),
-        ("BALANCEADO MODERADO", "Fondo Moderado Focus"),
-        ("BALANCEADO AGRESIVO", "Fondo Focus Arriesgado")
-    ]
-    periodos_orden = ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y"]
-    filas_bloque = [
-        "Fondo", "Ranking vs Comparables", "Total Comparables",
-        "Rentabilidad Promedio Comparables", "Delta vs comparables"
-    ]
-    # Ajustar ancho de columnas solo hasta la I
-    worksheet.set_column(0, 0, 32, base_fmt)
-    worksheet.set_column(1, 1, 34, left_fmt)
-    worksheet.set_column(2, 8, 12, base_fmt)
-    # Obtener el resumen limpio
-    summary = get_summary_dict(df_stats)
-    row = 0
-    for cat, fondo in orden_bloques:
-        # Título de bloque
-        worksheet.write(row, 1, cat, blue)
-        # Encabezado de períodos
-        worksheet.write_row(row+1, 2, periodos_orden, left_fmt)
-        # Fila: Fondo Focus
-        worksheet.write(row+2, 1, fondo, left_fmt)
-        for j, val in enumerate(summary[cat]["Fondo"]):
-            col = 2 + j
-            worksheet.write(row+2, col, val, percent_bold_underline)
-        # Fila: Ranking vs Comparables
-        worksheet.write(row+3, 1, "Ranking vs Comparables", left_fmt)
-        for j, val in enumerate(summary[cat]["Ranking vs Comparables"]):
-            col = 2 + j
-            worksheet.write(row+3, col, val, normal)
-        # Fila: Total Comparables
-        worksheet.write(row+4, 1, "Total Comparables", left_fmt)
-        for j, val in enumerate(summary[cat]["Total Comparables"]):
-            col = 2 + j
-            worksheet.write(row+4, col, val, normal)
-        # Fila: Rentabilidad Promedio Comparables
-        worksheet.write(row+5, 1, "Rentabilidad Promedio Comparables", left_fmt)
-        for j, val in enumerate(summary[cat]["Rentabilidad Promedio Comparables"]):
-            col = 2 + j
-            worksheet.write(row+5, col, val, percent)
-        # Fila: Delta vs comparables
-        worksheet.write(row+6, 1, "Delta vs comparables", left_fmt)
-        for j, val in enumerate(summary[cat]["Delta vs comparables"]):
-            col = 2 + j
-            if pd.notnull(val):
-                fmt = percent_green if val >= 0 else percent_red
-                worksheet.write(row+6, col, val, fmt)
-            else:
-                worksheet.write(row+6, col, val, percent)
-        # Fila vacía
-        row += 8
-
-@timer
 def generate_cla_data(  
     input_date: date = date.today(),
     categories: list[str] = CATEGORIAS_ELMER,
@@ -526,11 +340,7 @@ def generate_cla_data(
 
     # Paso 9: Crear tabla resumen y agregarla al Excel
     if save_xlsx and excel_steps in ["all", "minimal"]:
-        tabla_resumen = create_summary_table(df_stats)
-        dfs_intermedios["9 Resumen"] = tabla_resumen
-        # Paso 10: Copiar y formatear
-        dfs_intermedios["10 Formateado"] = tabla_resumen.copy()
-
+        dfs_intermedios["9 Resumen"] = df_stats.to_pandas()
     
     # Guardar todos los DataFrames en el Excel si se solicitó
     if save_xlsx and dfs_intermedios:
@@ -542,10 +352,7 @@ def generate_cla_data(
                 dfs_pandas[sheet_name] = df
         with pd.ExcelWriter(xlsx_name, engine='xlsxwriter') as writer:
             for sheet_name, df in dfs_pandas.items():
-                if sheet_name == "10 Formateado":
-                    df.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
-                else:
-                    df.to_excel(writer, sheet_name=sheet_name, index=True)
+                df.to_excel(writer, sheet_name=sheet_name, index=True)
                 worksheet = writer.sheets[sheet_name]
                 for idx, col in enumerate(df.columns):
                     max_length = max(
@@ -553,22 +360,107 @@ def generate_cla_data(
                         len(str(col))
                     )
                     worksheet.set_column(idx, idx, max_length * 1.2)
-            # Formatear la hoja 10 si existe
-            if "10 Formateado" in dfs_pandas:
-                if "DELTA_VS_COMPARABLES" not in df_stats.columns:
-                    df_stats = df_stats.with_columns([
-                        (pl.col("RENTABILIDAD_PERIODO_SOYFOCUS") - pl.col("RENTABILIDAD_PROMEDIO")).alias("DELTA_VS_COMPARABLES")
-                    ])
-                format_summary_sheet(writer, df_stats, sheet_name="10 Formateado")
-    
+            # Crear hoja 10 Salida con formato visual
+            write_hoja_10_salida(writer, df_stats)
+
     return df_with_stats
 
+def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
+    """
+    Escribe la hoja 10 Salida en el Excel, con formato visual tipo bloque por categoría.
+    Args:
+        writer: ExcelWriter de pandas (engine xlsxwriter)
+        df_stats: DataFrame de estadísticas (polars)
+        sheet_name: nombre de la hoja
+    """
+    worksheet = writer.book.add_worksheet(sheet_name)
+    writer.sheets[sheet_name] = worksheet
+
+    # Formatos
+    azul = writer.book.add_format({'bg_color': '#6161ff', 'font_color': 'white', 'bold': True, 'align': 'left', 'font_name': 'Infra'})
+    negrita = writer.book.add_format({'bold': True, 'font_name': 'Infra', 'align': 'left'})
+    normal = writer.book.add_format({'font_name': 'Infra', 'align': 'right'})
+    porcentaje = writer.book.add_format({'num_format': '0.0%', 'font_name': 'Infra', 'align': 'right'})
+    porcentaje_bold = writer.book.add_format({'num_format': '0.0%', 'bold': True, 'font_name': 'Infra', 'align': 'right'})
+    porcentaje_verde = writer.book.add_format({'num_format': '0.0%', 'font_color': '#008000', 'font_name': 'Infra', 'align': 'right'})
+    porcentaje_rojo = writer.book.add_format({'num_format': '0.0%', 'font_color': '#C00000', 'font_name': 'Infra', 'align': 'right'})
+    vacio = writer.book.add_format({'bg_color': '#FFFFFF'})
+
+    # Estructura
+    periodos = ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y"]
+    categorias = [
+        ("BALANCEADO CONSERVADOR", "Fondo Conservador Focus"),
+        ("BALANCEADO MODERADO", "Fondo Moderado Focus"),
+        ("BALANCEADO AGRESIVO", "Fondo Arriesgado Focus")
+    ]
+    filas = [
+        "Fondo", "Ranking vs Comparables", "Total Comparables",
+        "Rentabilidad Promedio Comparables", "Delta vs Comparables"
+    ]
+
+    # Convertir a pandas
+    df_pd = df_stats.to_pandas()
+    df_pd["PERIODO"] = df_pd["PERIODO"].astype(str)
+    if "DELTA_VS_COMPARABLES" not in df_pd.columns:
+        df_pd["DELTA_VS_COMPARABLES"] = df_pd["RENTABILIDAD_PERIODO_SOYFOCUS"] - df_pd["RENTABILIDAD_PROMEDIO"]
+
+    row = 0
+    for cat, fondo in categorias:
+        df_cat = df_pd[df_pd["CATEGORIA"] == cat]
+        # Encabezado azul
+        worksheet.write(row, 0, cat.split()[-1].capitalize(), azul)
+        for col in range(1, len(periodos)+1):
+            worksheet.write(row, col, "", azul)
+        row += 1
+        # Fondo Focus (negrita, porcentaje)
+        worksheet.write(row, 0, fondo, negrita)
+        for j, per in enumerate(periodos):
+            val = df_cat.loc[df_cat["PERIODO"] == per, "RENTABILIDAD_PERIODO_SOYFOCUS"]
+            if not val.empty and pd.notnull(val.values[0]):
+                worksheet.write(row, j+1, float(val.values[0])-1, porcentaje_bold)
+            else:
+                worksheet.write(row, j+1, "", vacio)
+        row += 1
+        # Ranking vs Comparables
+        worksheet.write(row, 0, "Ranking vs Comparables", normal)
+        for j, per in enumerate(periodos):
+            val = df_cat.loc[df_cat["PERIODO"] == per, "POSICION_SOYFOCUS"]
+            worksheet.write(row, j+1, int(val.values[0]) if not val.empty and pd.notnull(val.values[0]) else "", normal)
+        row += 1
+        # Total Comparables
+        worksheet.write(row, 0, "Total Comparables", normal)
+        for j, per in enumerate(periodos):
+            val = df_cat.loc[df_cat["PERIODO"] == per, "NUM_SERIES"]
+            worksheet.write(row, j+1, int(val.values[0]) if not val.empty and pd.notnull(val.values[0]) else "", normal)
+        row += 1
+        # Rentabilidad Promedio Comparables (porcentaje)
+        worksheet.write(row, 0, "Rentabilidad Promedio Comparables", normal)
+        for j, per in enumerate(periodos):
+            val = df_cat.loc[df_cat["PERIODO"] == per, "RENTABILIDAD_PROMEDIO"]
+            if not val.empty and pd.notnull(val.values[0]):
+                worksheet.write(row, j+1, float(val.values[0])-1, porcentaje)
+            else:
+                worksheet.write(row, j+1, "", vacio)
+        row += 1
+        # Delta vs Comparables (porcentaje, verde/rojo)
+        worksheet.write(row, 0, "Delta vs Comparables", normal)
+        for j, per in enumerate(periodos):
+            val = df_cat.loc[df_cat["PERIODO"] == per, "DELTA_VS_COMPARABLES"]
+            if not val.empty and pd.notnull(val.values[0]):
+                v = float(val.values[0])
+                fmt = porcentaje_verde if v >= 0 else porcentaje_rojo
+                worksheet.write(row, j+1, v, fmt)
+            else:
+                worksheet.write(row, j+1, "", vacio)
+        row += 1
+        # Fila vacía
+        row += 1
+    # Ajustar anchos
+    worksheet.set_column(0, 0, 32)
+    worksheet.set_column(1, len(periodos), 12)
 
 if __name__ == "__main__":
-    # Generar fechas para el análisis CLA
-    cla_dates = generate_cla_dates()
-    print(f"{cla_dates = }")
-    
+   
     # Generar datos para el análisis CLA y guardar pasos intermedios en Excel
     df = generate_cla_data(
         save_xlsx=True,
