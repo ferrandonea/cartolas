@@ -1,4 +1,4 @@
-from comparador.new_new_cla import generate_cla_data
+from comparador.cla_monthly import generate_cla_data
 from cartolas.update_by_year import update_parquet_by_year
 from eco.bcentral import update_bcch_parquet
 from datetime import date
