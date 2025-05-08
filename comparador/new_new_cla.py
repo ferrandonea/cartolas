@@ -1,3 +1,20 @@
+"""
+Módulo para generar y analizar datos de rentabilidad de fondos mutuos.
+
+Este módulo proporciona funciones para:
+1. Calcular rentabilidades acumuladas y por período
+2. Comparar fondos con sus pares de categoría
+3. Generar estadísticas y rankings
+4. Exportar resultados a Excel con formato visual
+
+Las funciones principales incluyen:
+- generate_cla_dates: Genera fechas para diferentes períodos de análisis
+- add_cumulative_returns: Calcula rentabilidades acumuladas
+- add_period_returns: Calcula rentabilidades por período
+- add_soyfocus_returns: Agrega rentabilidades del fondo SoyFocus
+- generate_cla_data: Función principal que orquesta todo el proceso
+"""
+
 from datetime import date
 from typing import Literal
 
@@ -15,34 +32,36 @@ from utiles.fechas import (
 from utiles.decorators import timer
 
 # Constantes para los períodos de análisis
-MESES_CLA = [1, 3, 6]  # Períodos mensuales a analizar
-AÑOS_CLA = [1, 3, 5]  # Períodos anuales a analizar
+MESES_CLA = [1, 3, 6]  # Períodos mensuales a analizar (1, 3 y 6 meses)
+AÑOS_CLA = [1, 3, 5]  # Períodos anuales a analizar (1, 3 y 5 años)
 CATEGORIAS_CLA = ["CONSERVADOR", "MODERADO", "AGRESIVO"]  # Categorías base de fondos
 # Genera las categorías completas agregando el prefijo "BALANCEADO"
 CATEGORIAS_ELMER = [f"BALANCEADO {categoria}" for categoria in CATEGORIAS_CLA]
+
+# Columnas relevantes para el análisis final
 RELEVANT_COLUMNS = [
-    "RUN_FM",
-    "SERIE",
-    "FECHA_INF",
-    "CATEGORIA",
-    "RENTABILIDAD_ACUMULADA",
-    "RUN_SOYFOCUS",
-    "SERIE_SOYFOCUS",
+    "RUN_FM",  # Identificador único del fondo
+    "SERIE",  # Serie del fondo
+    "FECHA_INF",  # Fecha de la información
+    "CATEGORIA",  # Categoría del fondo
+    "RENTABILIDAD_ACUMULADA",  # Rentabilidad acumulada desde el inicio
+    "RUN_SOYFOCUS",  # Identificador del fondo SoyFocus correspondiente
+    "SERIE_SOYFOCUS",  # Serie del fondo SoyFocus correspondiente
 ]
 
 # Nombres de las hojas para el archivo Excel
 EXCEL_SHEETS = {
-    "datos_base": "1 Base",
-    "rentabilidades": "2 Acumuladas",
-    "categorias": "3 Categoría",
-    "columnas": "4 Seleccionadas",
-    "fechas": "5 Fecha",
-    "rentabilidad_periodo": "6 Rentabilidad Período",
-    "final": "7 SoyFocus",
-    "estadisticas": "8 Estadísticas",
+    "datos_base": "1 Base",  # Datos base sin procesar
+    "rentabilidades": "2 Acumuladas",  # Rentabilidades acumuladas
+    "categorias": "3 Categoría",  # Datos filtrados por categoría
+    "columnas": "4 Seleccionadas",  # Columnas seleccionadas
+    "fechas": "5 Fecha",  # Datos filtrados por fechas relevantes
+    "rentabilidad_periodo": "6 Rentabilidad Período",  # Rentabilidades por período
+    "final": "7 SoyFocus",  # Datos finales con comparación SoyFocus
+    "estadisticas": "8 Estadísticas",  # Estadísticas resumidas
 }
 
-# Pasos que se pueden guardar en Excel
+# Opciones para guardar pasos intermedios en Excel
 EXCEL_STEPS = Literal["all", "minimal", "none"]
 
 
@@ -73,9 +92,9 @@ def generate_cla_dates(input_date: date = date.today()) -> dict[int, date]:
 
     # Construir el diccionario de fechas combinando:
     cla_dates = {
-        # Fechas para períodos mensuales
+        # Fechas para períodos mensuales (1, 3, 6 meses)
         **{mes: date_n_months_ago(mes, current_report_date) for mes in MESES_CLA},
-        # Fechas para períodos anuales (convertidos a meses)
+        # Fechas para períodos anuales (convertidos a meses: 12, 36, 60)
         **{año * 12: date_n_years_ago(año, current_report_date) for año in AÑOS_CLA},
         # Fechas especiales
         -1: ultimo_dia_año_anterior(current_report_date),  # Último día del año anterior
@@ -107,9 +126,9 @@ def add_cumulative_returns(df: pl.DataFrame) -> pl.DataFrame:
     return sorted_df.with_columns(
         [
             pl.col("RENTABILIDAD_DIARIA_PESOS")
-            .cum_prod()  # Producto acumulativo
+            .cum_prod()  # Producto acumulativo de rentabilidades diarias
             .over(["RUN_FM", "SERIE"])  # Agrupado por fondo y serie
-            .fill_nan(1)  # Reemplazar NaN por 1
+            .fill_nan(1)  # Reemplazar NaN por 1 (rentabilidad neutral)
             .fill_null(1)  # Reemplazar valores nulos por 1
             .alias("RENTABILIDAD_ACUMULADA")
         ]
@@ -156,7 +175,7 @@ def add_soyfocus_returns(df: pl.DataFrame) -> pl.DataFrame:
         }
     )
 
-    # Calcular la rentabilidad del período de SoyFocus
+    # Calcular la rentabilidad relativa del período de SoyFocus
     return df_joined.with_columns(
         [
             (
@@ -224,8 +243,8 @@ def add_category_statistics(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFram
     # Calcular estadísticas por categoría y fecha
     stats = df.group_by(["CATEGORIA", "FECHA_INF"]).agg(
         [
-            pl.count("SERIE").alias("NUM_SERIES"),
-            pl.mean("RENTABILIDAD_PERIODO").alias("RENTABILIDAD_PROMEDIO"),
+            pl.count("SERIE").alias("NUM_SERIES"),  # Número de series por categoría
+            pl.mean("RENTABILIDAD_PERIODO").alias("RENTABILIDAD_PROMEDIO"),  # Rentabilidad promedio
         ]
     )
 
@@ -301,62 +320,63 @@ def generate_cla_data(
     Returns:
         pl.DataFrame: DataFrame procesado con todos los datos necesarios para el análisis CLA
     """
-    # Obtener las fechas relevantes
+    # Obtener las fechas relevantes para el análisis
     cla_dates = generate_cla_dates(input_date)
     # Invertir el diccionario para mapear fecha a nombre de período
     fecha_a_periodo = {v: k for k, v in cla_dates.items()}
+    # Etiquetas para los períodos en el reporte
     periodo_labels = {
-        1: "1M",
-        3: "3M",
-        6: "6M",
-        12: "1Y",
-        36: "3Y",
-        60: "5Y",
-        -1: "YTD",
-        0: "YTD",
+        1: "1M",  # 1 mes
+        3: "3M",  # 3 meses
+        6: "6M",  # 6 meses
+        12: "1Y",  # 1 año
+        36: "3Y",  # 3 años
+        60: "5Y",  # 5 años
+        -1: "YTD",  # Año hasta la fecha
+        0: "YTD",  # Año hasta la fecha
     }
 
     # Diccionario para almacenar los DataFrames intermedios
     dfs_intermedios = {}
 
-    # Obtener datos base y agregar categorías
+    # Paso 1: Obtener datos base y agregar categorías
     df_base: pl.LazyFrame = merge_cartolas_with_categories()
     if save_xlsx and excel_steps == "all":
         dfs_intermedios[EXCEL_SHEETS["datos_base"]] = df_base.collect()
 
-    # Calcular rentabilidades acumuladas
+    # Paso 2: Calcular rentabilidades acumuladas
     df_rent: pl.LazyFrame = add_cumulative_returns(df_base)
     if save_xlsx and excel_steps == "all":
         dfs_intermedios[EXCEL_SHEETS["rentabilidades"]] = df_rent.collect()
 
-    # Filtrar por categorías relevantes
+    # Paso 3: Filtrar por categorías relevantes
     df_cat: pl.LazyFrame = df_rent.filter(pl.col("CATEGORIA").is_in(categories))
     if save_xlsx and excel_steps in ["all", "minimal"]:
         dfs_intermedios[EXCEL_SHEETS["categorias"]] = df_cat.collect()
 
-    # Seleccionar columnas relevantes y convertir a DataFrame
+    # Paso 4: Seleccionar columnas relevantes y convertir a DataFrame
     df_cols: pl.DataFrame = df_cat.collect().select(relevant_columns)
     if save_xlsx and excel_steps == "all":
         dfs_intermedios[EXCEL_SHEETS["columnas"]] = df_cols
 
-    # Filtrar por fechas relevantes
+    # Paso 5: Filtrar por fechas relevantes
     df_fechas: pl.DataFrame = df_cols.filter(
         pl.col("FECHA_INF").is_in(list(cla_dates.values()))
     )
     if save_xlsx and excel_steps in ["all", "minimal"]:
         dfs_intermedios[EXCEL_SHEETS["fechas"]] = df_fechas
 
-    # Calcular rentabilidades del período
+    # Paso 6: Calcular rentabilidades del período
     df_periodo: pl.DataFrame = add_period_returns(df_fechas, cla_dates)
     if save_xlsx and excel_steps in ["all", "minimal"]:
         dfs_intermedios[EXCEL_SHEETS["rentabilidad_periodo"]] = df_periodo
 
-    # Agregar rentabilidad de SoyFocus
+    # Paso 7: Agregar rentabilidad de SoyFocus
     df_final: pl.DataFrame = add_soyfocus_returns(df_periodo)
     if save_xlsx and excel_steps in ["all", "minimal"]:
         dfs_intermedios[EXCEL_SHEETS["final"]] = df_final
 
-    # Calcular estadísticas por categoría y fecha
+    # Paso 8: Calcular estadísticas por categoría y fecha
     df_with_stats, df_stats = add_category_statistics(df_final)
     # Agregar columna PERIODO a df_stats
     df_stats = df_stats.with_columns(
@@ -402,6 +422,14 @@ def generate_cla_data(
 def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
     """
     Escribe la hoja 10 Salida en el Excel, con formato visual tipo bloque por categoría.
+
+    Esta función crea una hoja de Excel con formato visual que muestra:
+    - Rentabilidades por período para cada fondo
+    - Ranking vs comparables
+    - Total de comparables
+    - Rentabilidad promedio de comparables
+    - Delta vs comparables
+
     Args:
         writer: ExcelWriter de pandas (engine xlsxwriter)
         df_stats: DataFrame de estadísticas (polars)
@@ -410,7 +438,7 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
     worksheet = writer.book.add_worksheet(sheet_name)
     writer.sheets[sheet_name] = worksheet
 
-    # Formatos
+    # Definición de formatos para diferentes tipos de celdas
     azul = writer.book.add_format(
         {
             "bg_color": "#6161ff",
@@ -469,8 +497,8 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
         {"font_name": "Infra", "align": "left", "bg_color": "#FFFFFF", "bold": True}
     )
 
-    # Estructura
-    periodos = ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y"]
+    # Estructura de la hoja
+    periodos = ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y"]  # Períodos a mostrar
     categorias = [
         ("BALANCEADO CONSERVADOR", "Fondo Conservador Focus"),
         ("BALANCEADO MODERADO", "Fondo Moderado Focus"),
@@ -484,7 +512,7 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
         "Delta vs Comparables",
     ]
 
-    # Convertir a pandas
+    # Convertir a pandas y preparar datos
     df_pd = df_stats.to_pandas()
     df_pd["PERIODO"] = df_pd["PERIODO"].astype(str)
     if "DELTA_VS_COMPARABLES" not in df_pd.columns:
@@ -492,10 +520,11 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
             df_pd["RENTABILIDAD_PERIODO_SOYFOCUS"] - df_pd["RENTABILIDAD_PROMEDIO"]
         )
 
+    # Escribir datos en la hoja
     row = 0
     for cat, fondo in categorias:
         df_cat = df_pd[df_pd["CATEGORIA"] == cat]
-        # Encabezado azul
+        # Encabezado azul con nombre de categoría
         worksheet.write(row, 0, cat.split()[-1].capitalize(), azul)
         for col in range(1, len(periodos) + 1):
             worksheet.write(row, col, "", azul)
@@ -560,11 +589,12 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
             else:
                 worksheet.write(row, j + 1, "", vacio)
         row += 1
-        # Fila vacía
+        # Fila vacía entre categorías
         row += 1
-    # Ajustar anchos
-    worksheet.set_column(0, 0, 32)
-    worksheet.set_column(1, len(periodos), 12)
+
+    # Ajustar anchos de columna
+    worksheet.set_column(0, 0, 32)  # Primera columna más ancha
+    worksheet.set_column(1, len(periodos), 12)  # Columnas de períodos más estrechas
 
 
 if __name__ == "__main__":
