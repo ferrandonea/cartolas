@@ -39,11 +39,12 @@ EXCEL_SHEETS = {
     "fechas": "5 Fecha",
     "rentabilidad_periodo": "6 Rentabilidad Período",
     "final": "7 SoyFocus",
-    "estadisticas": "8 Estadísticas"
+    "estadisticas": "8 Estadísticas",
 }
 
 # Pasos que se pueden guardar en Excel
 EXCEL_STEPS = Literal["all", "minimal", "none"]
+
 
 @timer
 def generate_cla_dates(input_date: date = date.today()) -> dict[int, date]:
@@ -83,6 +84,7 @@ def generate_cla_dates(input_date: date = date.today()) -> dict[int, date]:
 
     return cla_dates
 
+
 @timer
 def add_cumulative_returns(df: pl.DataFrame) -> pl.DataFrame:
     """
@@ -113,6 +115,7 @@ def add_cumulative_returns(df: pl.DataFrame) -> pl.DataFrame:
         ]
     )
 
+
 @timer
 def add_soyfocus_returns(df: pl.DataFrame) -> pl.DataFrame:
     """
@@ -130,25 +133,38 @@ def add_soyfocus_returns(df: pl.DataFrame) -> pl.DataFrame:
             - 'RENTABILIDAD_PERIODO_SOYFOCUS': rentabilidad del período del fondo SoyFocus
     """
     # Convertir RUN_SOYFOCUS a u16 para que coincida con el tipo de RUN_FM
-    df = df.with_columns([
-        pl.col("RUN_SOYFOCUS").cast(pl.UInt16)
-    ])
+    df = df.with_columns([pl.col("RUN_SOYFOCUS").cast(pl.UInt16)])
 
     # Hacemos el join para obtener la rentabilidad del fondo SoyFocus
     df_joined = df.join(
-        df.select(["RUN_FM", "SERIE", "FECHA_INF", "RENTABILIDAD_ACUMULADA", "RENTABILIDAD_PERIODO"]),
+        df.select(
+            [
+                "RUN_FM",
+                "SERIE",
+                "FECHA_INF",
+                "RENTABILIDAD_ACUMULADA",
+                "RENTABILIDAD_PERIODO",
+            ]
+        ),
         left_on=["RUN_SOYFOCUS", "SERIE_SOYFOCUS", "FECHA_INF"],
         right_on=["RUN_FM", "SERIE", "FECHA_INF"],
-        how="left"
-    ).rename({
-        "RENTABILIDAD_ACUMULADA_right": "RENTABILIDAD_AC_SOYFOCUS",
-        "RENTABILIDAD_PERIODO_right": "RENTABILIDAD_PERIODO_SOYFOCUS"
-    })
+        how="left",
+    ).rename(
+        {
+            "RENTABILIDAD_ACUMULADA_right": "RENTABILIDAD_AC_SOYFOCUS",
+            "RENTABILIDAD_PERIODO_right": "RENTABILIDAD_PERIODO_SOYFOCUS",
+        }
+    )
 
     # Calcular la rentabilidad del período de SoyFocus
-    return df_joined.with_columns([
-        (pl.col("RENTABILIDAD_PERIODO_SOYFOCUS") / pl.col("RENTABILIDAD_PERIODO")).alias("RENTABILIDAD_PERIODO_SOYFOCUS_REL")
-    ])
+    return df_joined.with_columns(
+        [
+            (
+                pl.col("RENTABILIDAD_PERIODO_SOYFOCUS") / pl.col("RENTABILIDAD_PERIODO")
+            ).alias("RENTABILIDAD_PERIODO_SOYFOCUS_REL")
+        ]
+    )
+
 
 @timer
 def add_period_returns(df: pl.DataFrame, cla_dates: dict[int, date]) -> pl.DataFrame:
@@ -165,22 +181,28 @@ def add_period_returns(df: pl.DataFrame, cla_dates: dict[int, date]) -> pl.DataF
     """
     # Obtener la fecha más reciente (clave 0 en cla_dates)
     fecha_reciente = cla_dates[0]
-    
+
     # Crear un DataFrame con las rentabilidades de la fecha más reciente
-    df_reciente = df.filter(pl.col("FECHA_INF") == fecha_reciente).select([
-        "RUN_FM",
-        "SERIE",
-        "RENTABILIDAD_ACUMULADA"
-    ]).rename({"RENTABILIDAD_ACUMULADA": "RENTABILIDAD_ACUMULADA_RECIENTE"})
-    
+    df_reciente = (
+        df.filter(pl.col("FECHA_INF") == fecha_reciente)
+        .select(["RUN_FM", "SERIE", "RENTABILIDAD_ACUMULADA"])
+        .rename({"RENTABILIDAD_ACUMULADA": "RENTABILIDAD_ACUMULADA_RECIENTE"})
+    )
+
     # Hacer join con el DataFrame original y calcular la rentabilidad del período
-    return df.join(
-        df_reciente,
-        on=["RUN_FM", "SERIE"],
-        how="left"
-    ).with_columns([
-        (pl.col("RENTABILIDAD_ACUMULADA_RECIENTE") / pl.col("RENTABILIDAD_ACUMULADA")).alias("RENTABILIDAD_PERIODO")
-    ]).drop("RENTABILIDAD_ACUMULADA_RECIENTE")
+    return (
+        df.join(df_reciente, on=["RUN_FM", "SERIE"], how="left")
+        .with_columns(
+            [
+                (
+                    pl.col("RENTABILIDAD_ACUMULADA_RECIENTE")
+                    / pl.col("RENTABILIDAD_ACUMULADA")
+                ).alias("RENTABILIDAD_PERIODO")
+            ]
+        )
+        .drop("RENTABILIDAD_ACUMULADA_RECIENTE")
+    )
+
 
 @timer
 def add_category_statistics(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
@@ -200,46 +222,45 @@ def add_category_statistics(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFram
             - DataFrame con las estadísticas resumidas por categoría y fecha
     """
     # Calcular estadísticas por categoría y fecha
-    stats = df.group_by(["CATEGORIA", "FECHA_INF"]).agg([
-        pl.count("SERIE").alias("NUM_SERIES"),
-        pl.mean("RENTABILIDAD_PERIODO").alias("RENTABILIDAD_PROMEDIO")
-    ])
+    stats = df.group_by(["CATEGORIA", "FECHA_INF"]).agg(
+        [
+            pl.count("SERIE").alias("NUM_SERIES"),
+            pl.mean("RENTABILIDAD_PERIODO").alias("RENTABILIDAD_PROMEDIO"),
+        ]
+    )
 
     # Calcular la posición y rentabilidad de SoyFocus para cada categoría y fecha
-    soyfocus_stats = df.group_by(["CATEGORIA", "FECHA_INF"]).agg([
-        pl.col("RENTABILIDAD_PERIODO_SOYFOCUS_REL")
-        .rank(method="min", descending=False)  # Cambiado a False para que 1 sea la mejor posición
-        .filter(pl.col("RUN_FM") == pl.col("RUN_SOYFOCUS"))
-        .first()
-        .alias("POSICION_SOYFOCUS"),
-        pl.col("RENTABILIDAD_PERIODO_SOYFOCUS")
-        .filter(pl.col("RUN_FM") == pl.col("RUN_SOYFOCUS"))
-        .first()
-        .alias("RENTABILIDAD_PERIODO_SOYFOCUS")
-    ])
+    soyfocus_stats = df.group_by(["CATEGORIA", "FECHA_INF"]).agg(
+        [
+            pl.col("RENTABILIDAD_PERIODO_SOYFOCUS_REL")
+            .rank(
+                method="min", descending=False
+            )  # Cambiado a False para que 1 sea la mejor posición
+            .filter(pl.col("RUN_FM") == pl.col("RUN_SOYFOCUS"))
+            .first()
+            .alias("POSICION_SOYFOCUS"),
+            pl.col("RENTABILIDAD_PERIODO_SOYFOCUS")
+            .filter(pl.col("RUN_FM") == pl.col("RUN_SOYFOCUS"))
+            .first()
+            .alias("RENTABILIDAD_PERIODO_SOYFOCUS"),
+        ]
+    )
 
     # Unir las estadísticas con el DataFrame original
-    df_with_stats = df.join(
-        stats,
-        on=["CATEGORIA", "FECHA_INF"],
-        how="left"
-    ).join(
-        soyfocus_stats,
-        on=["CATEGORIA", "FECHA_INF"],
-        how="left"
+    df_with_stats = df.join(stats, on=["CATEGORIA", "FECHA_INF"], how="left").join(
+        soyfocus_stats, on=["CATEGORIA", "FECHA_INF"], how="left"
     )
 
     # Crear DataFrame resumen con todas las estadísticas
     df_stats = stats.join(
-        soyfocus_stats,
-        on=["CATEGORIA", "FECHA_INF"],
-        how="left"
+        soyfocus_stats, on=["CATEGORIA", "FECHA_INF"], how="left"
     ).sort(["CATEGORIA", "FECHA_INF"])
 
     return df_with_stats, df_stats
 
+
 @timer
-def generate_cla_data(  
+def generate_cla_data(
     input_date: date = date.today(),
     categories: list[str] = CATEGORIAS_ELMER,
     relevant_columns: list[str] = RELEVANT_COLUMNS,
@@ -284,64 +305,77 @@ def generate_cla_data(
     cla_dates = generate_cla_dates(input_date)
     # Invertir el diccionario para mapear fecha a nombre de período
     fecha_a_periodo = {v: k for k, v in cla_dates.items()}
-    periodo_labels = {1: "1M", 3: "3M", 6: "6M", 12: "1Y", 36: "3Y", 60: "5Y", -1: "YTD", 0: "YTD"}
-    
+    periodo_labels = {
+        1: "1M",
+        3: "3M",
+        6: "6M",
+        12: "1Y",
+        36: "3Y",
+        60: "5Y",
+        -1: "YTD",
+        0: "YTD",
+    }
+
     # Diccionario para almacenar los DataFrames intermedios
     dfs_intermedios = {}
-    
+
     # Obtener datos base y agregar categorías
     df_base: pl.LazyFrame = merge_cartolas_with_categories()
     if save_xlsx and excel_steps == "all":
         dfs_intermedios[EXCEL_SHEETS["datos_base"]] = df_base.collect()
-    
+
     # Calcular rentabilidades acumuladas
     df_rent: pl.LazyFrame = add_cumulative_returns(df_base)
     if save_xlsx and excel_steps == "all":
         dfs_intermedios[EXCEL_SHEETS["rentabilidades"]] = df_rent.collect()
-    
+
     # Filtrar por categorías relevantes
     df_cat: pl.LazyFrame = df_rent.filter(pl.col("CATEGORIA").is_in(categories))
     if save_xlsx and excel_steps in ["all", "minimal"]:
         dfs_intermedios[EXCEL_SHEETS["categorias"]] = df_cat.collect()
-    
+
     # Seleccionar columnas relevantes y convertir a DataFrame
     df_cols: pl.DataFrame = df_cat.collect().select(relevant_columns)
     if save_xlsx and excel_steps == "all":
         dfs_intermedios[EXCEL_SHEETS["columnas"]] = df_cols
-    
+
     # Filtrar por fechas relevantes
     df_fechas: pl.DataFrame = df_cols.filter(
         pl.col("FECHA_INF").is_in(list(cla_dates.values()))
     )
     if save_xlsx and excel_steps in ["all", "minimal"]:
         dfs_intermedios[EXCEL_SHEETS["fechas"]] = df_fechas
-    
+
     # Calcular rentabilidades del período
     df_periodo: pl.DataFrame = add_period_returns(df_fechas, cla_dates)
     if save_xlsx and excel_steps in ["all", "minimal"]:
         dfs_intermedios[EXCEL_SHEETS["rentabilidad_periodo"]] = df_periodo
-    
+
     # Agregar rentabilidad de SoyFocus
     df_final: pl.DataFrame = add_soyfocus_returns(df_periodo)
     if save_xlsx and excel_steps in ["all", "minimal"]:
         dfs_intermedios[EXCEL_SHEETS["final"]] = df_final
-    
+
     # Calcular estadísticas por categoría y fecha
     df_with_stats, df_stats = add_category_statistics(df_final)
     # Agregar columna PERIODO a df_stats
-    df_stats = df_stats.with_columns([
-        pl.col("FECHA_INF").map_elements(
-            lambda x: periodo_labels.get(fecha_a_periodo.get(x, None), str(x)),
-            return_dtype=pl.Utf8
-        ).alias("PERIODO")
-    ])
+    df_stats = df_stats.with_columns(
+        [
+            pl.col("FECHA_INF")
+            .map_elements(
+                lambda x: periodo_labels.get(fecha_a_periodo.get(x, None), str(x)),
+                return_dtype=pl.Utf8,
+            )
+            .alias("PERIODO")
+        ]
+    )
     if save_xlsx and excel_steps in ["all", "minimal"]:
         dfs_intermedios[EXCEL_SHEETS["estadisticas"]] = df_stats
 
     # Paso 9: Crear tabla resumen y agregarla al Excel
     if save_xlsx and excel_steps in ["all", "minimal"]:
         dfs_intermedios["9 Resumen"] = df_stats.to_pandas()
-    
+
     # Guardar todos los DataFrames en el Excel si se solicitó
     if save_xlsx and dfs_intermedios:
         dfs_pandas = {}
@@ -350,20 +384,20 @@ def generate_cla_data(
                 dfs_pandas[sheet_name] = df.to_pandas()
             else:
                 dfs_pandas[sheet_name] = df
-        with pd.ExcelWriter(xlsx_name, engine='xlsxwriter') as writer:
+        with pd.ExcelWriter(xlsx_name, engine="xlsxwriter") as writer:
             for sheet_name, df in dfs_pandas.items():
                 df.to_excel(writer, sheet_name=sheet_name, index=True)
                 worksheet = writer.sheets[sheet_name]
                 for idx, col in enumerate(df.columns):
                     max_length = max(
-                        df[col].astype(str).apply(len).max(),
-                        len(str(col))
+                        df[col].astype(str).apply(len).max(), len(str(col))
                     )
                     worksheet.set_column(idx, idx, max_length * 1.2)
             # Crear hoja 10 Salida con formato visual
             write_hoja_10_salida(writer, df_stats)
 
     return df_with_stats
+
 
 def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
     """
@@ -377,77 +411,143 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
     writer.sheets[sheet_name] = worksheet
 
     # Formatos
-    azul = writer.book.add_format({'bg_color': '#6161ff', 'font_color': 'white', 'bold': True, 'align': 'left', 'font_name': 'Infra'})
-    negrita = writer.book.add_format({'bold': True, 'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
-    normal = writer.book.add_format({'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
-    porcentaje = writer.book.add_format({'num_format': '0.0%', 'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
-    porcentaje_bold = writer.book.add_format({'num_format': '0.0%', 'bold': True, 'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
-    porcentaje_verde = writer.book.add_format({'num_format': '0.0%', 'font_color': '#008000', 'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
-    porcentaje_rojo = writer.book.add_format({'num_format': '0.0%', 'font_color': '#C00000', 'font_name': 'Infra', 'align': 'right', 'bg_color': '#FFFFFF'})
-    vacio = writer.book.add_format({'bg_color': '#FFFFFF'})
-    col_a = writer.book.add_format({'font_name': 'Infra', 'align': 'left', 'bg_color': '#FFFFFF'})
-    col_a_bold = writer.book.add_format({'font_name': 'Infra', 'align': 'left', 'bg_color': '#FFFFFF', 'bold': True})
+    azul = writer.book.add_format(
+        {
+            "bg_color": "#6161ff",
+            "font_color": "white",
+            "bold": True,
+            "align": "left",
+            "font_name": "Infra",
+        }
+    )
+    negrita = writer.book.add_format(
+        {"bold": True, "font_name": "Infra", "align": "right", "bg_color": "#FFFFFF"}
+    )
+    normal = writer.book.add_format(
+        {"font_name": "Infra", "align": "right", "bg_color": "#FFFFFF"}
+    )
+    porcentaje = writer.book.add_format(
+        {
+            "num_format": "0.0%",
+            "font_name": "Infra",
+            "align": "right",
+            "bg_color": "#FFFFFF",
+        }
+    )
+    porcentaje_bold = writer.book.add_format(
+        {
+            "num_format": "0.0%",
+            "bold": True,
+            "font_name": "Infra",
+            "align": "right",
+            "bg_color": "#FFFFFF",
+        }
+    )
+    porcentaje_verde = writer.book.add_format(
+        {
+            "num_format": "0.0%",
+            "font_color": "#008000",
+            "font_name": "Infra",
+            "align": "right",
+            "bg_color": "#FFFFFF",
+        }
+    )
+    porcentaje_rojo = writer.book.add_format(
+        {
+            "num_format": "0.0%",
+            "font_color": "#C00000",
+            "font_name": "Infra",
+            "align": "right",
+            "bg_color": "#FFFFFF",
+        }
+    )
+    vacio = writer.book.add_format({"bg_color": "#FFFFFF"})
+    col_a = writer.book.add_format(
+        {"font_name": "Infra", "align": "left", "bg_color": "#FFFFFF"}
+    )
+    col_a_bold = writer.book.add_format(
+        {"font_name": "Infra", "align": "left", "bg_color": "#FFFFFF", "bold": True}
+    )
 
     # Estructura
     periodos = ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y"]
     categorias = [
         ("BALANCEADO CONSERVADOR", "Fondo Conservador Focus"),
         ("BALANCEADO MODERADO", "Fondo Moderado Focus"),
-        ("BALANCEADO AGRESIVO", "Fondo Arriesgado Focus")
+        ("BALANCEADO AGRESIVO", "Fondo Arriesgado Focus"),
     ]
     filas = [
-        "Fondo", "Ranking vs Comparables", "Total Comparables",
-        "Rentabilidad Promedio Comparables", "Delta vs Comparables"
+        "Fondo",
+        "Ranking vs Comparables",
+        "Total Comparables",
+        "Rentabilidad Promedio Comparables",
+        "Delta vs Comparables",
     ]
 
     # Convertir a pandas
     df_pd = df_stats.to_pandas()
     df_pd["PERIODO"] = df_pd["PERIODO"].astype(str)
     if "DELTA_VS_COMPARABLES" not in df_pd.columns:
-        df_pd["DELTA_VS_COMPARABLES"] = df_pd["RENTABILIDAD_PERIODO_SOYFOCUS"] - df_pd["RENTABILIDAD_PROMEDIO"]
+        df_pd["DELTA_VS_COMPARABLES"] = (
+            df_pd["RENTABILIDAD_PERIODO_SOYFOCUS"] - df_pd["RENTABILIDAD_PROMEDIO"]
+        )
 
     row = 0
     for cat, fondo in categorias:
         df_cat = df_pd[df_pd["CATEGORIA"] == cat]
         # Encabezado azul
         worksheet.write(row, 0, cat.split()[-1].capitalize(), azul)
-        for col in range(1, len(periodos)+1):
+        for col in range(1, len(periodos) + 1):
             worksheet.write(row, col, "", azul)
         row += 1
         # Encabezado de períodos
         worksheet.write(row, 0, "", azul)
         for j, per in enumerate(periodos):
-            worksheet.write(row, j+1, per, azul)
+            worksheet.write(row, j + 1, per, azul)
         row += 1
         # Fondo Focus (negrita, porcentaje)
         worksheet.write(row, 0, fondo, col_a_bold)
         for j, per in enumerate(periodos):
             val = df_cat.loc[df_cat["PERIODO"] == per, "RENTABILIDAD_PERIODO_SOYFOCUS"]
             if not val.empty and pd.notnull(val.values[0]):
-                worksheet.write(row, j+1, float(val.values[0])-1, porcentaje_bold)
+                worksheet.write(row, j + 1, float(val.values[0]) - 1, porcentaje_bold)
             else:
-                worksheet.write(row, j+1, "", vacio)
+                worksheet.write(row, j + 1, "", vacio)
         row += 1
         # Ranking vs Comparables
         worksheet.write(row, 0, "Ranking vs Comparables", col_a)
         for j, per in enumerate(periodos):
             val = df_cat.loc[df_cat["PERIODO"] == per, "POSICION_SOYFOCUS"]
-            worksheet.write(row, j+1, int(val.values[0]) if not val.empty and pd.notnull(val.values[0]) else "", normal)
+            worksheet.write(
+                row,
+                j + 1,
+                int(val.values[0])
+                if not val.empty and pd.notnull(val.values[0])
+                else "",
+                normal,
+            )
         row += 1
         # Total Comparables
         worksheet.write(row, 0, "Total Comparables", col_a)
         for j, per in enumerate(periodos):
             val = df_cat.loc[df_cat["PERIODO"] == per, "NUM_SERIES"]
-            worksheet.write(row, j+1, int(val.values[0]) if not val.empty and pd.notnull(val.values[0]) else "", normal)
+            worksheet.write(
+                row,
+                j + 1,
+                int(val.values[0])
+                if not val.empty and pd.notnull(val.values[0])
+                else "",
+                normal,
+            )
         row += 1
         # Rentabilidad Promedio Comparables (porcentaje)
         worksheet.write(row, 0, "Rentabilidad Promedio Comparables", col_a)
         for j, per in enumerate(periodos):
             val = df_cat.loc[df_cat["PERIODO"] == per, "RENTABILIDAD_PROMEDIO"]
             if not val.empty and pd.notnull(val.values[0]):
-                worksheet.write(row, j+1, float(val.values[0])-1, porcentaje)
+                worksheet.write(row, j + 1, float(val.values[0]) - 1, porcentaje)
             else:
-                worksheet.write(row, j+1, "", vacio)
+                worksheet.write(row, j + 1, "", vacio)
         row += 1
         # Delta vs Comparables (porcentaje, verde/rojo)
         worksheet.write(row, 0, "Delta vs Comparables", col_a)
@@ -456,9 +556,9 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
             if not val.empty and pd.notnull(val.values[0]):
                 v = float(val.values[0])
                 fmt = porcentaje_verde if v >= 0 else porcentaje_rojo
-                worksheet.write(row, j+1, v, fmt)
+                worksheet.write(row, j + 1, v, fmt)
             else:
-                worksheet.write(row, j+1, "", vacio)
+                worksheet.write(row, j + 1, "", vacio)
         row += 1
         # Fila vacía
         row += 1
@@ -466,11 +566,11 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
     worksheet.set_column(0, 0, 32)
     worksheet.set_column(1, len(periodos), 12)
 
+
 if __name__ == "__main__":
-   
     # Generar datos para el análisis CLA y guardar pasos intermedios en Excel
     df = generate_cla_data(
         save_xlsx=True,
         xlsx_name="cla_data.xlsx",
-        excel_steps="minimal"  # Solo guardar los pasos más relevantes
+        excel_steps="minimal",  # Solo guardar los pasos más relevantes
     )
