@@ -7,7 +7,7 @@ requires-python = ">=3.11.9"
 dependencies = [
     "playwright>=1.49.0",
     "polars>=1.16.0",
-    "captchapass @ git+https://github.com/ferrandonea/captchapass.git",
+    "captchapass @ git+ssh://git@github.com/ferrandonea/captchapass.git",
     "sendgrid>=6.11.0",
     "python-dotenv>=1.0.1",
     "bcchapi>=1.1.2",

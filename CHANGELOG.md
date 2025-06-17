@@ -1,7 +1,12 @@
 # Changelog
 
+<<<<<<< HEAD
 ## 0.3.1
 Dockerizar proyecto con UV
+=======
+## 0.4.0
+
+>>>>>>> 9ce29b0aa2ccad0531e19b0e03694543c410cf1e
 
 ## 0.3.0
 ### Agregado
