@@ -1,12 +1,16 @@
 # Changelog
 
-<<<<<<< HEAD
-## 0.3.1
-Dockerizar proyecto con UV
-=======
 ## 0.4.0
+### Agregado
+- Documentación completa en español del proyecto (DOCUMENTACION.md)
+- Nuevo script `resumen_apv.py` para análisis APV
+- Mejoras en documentación y estructura del script `cla_mensual.py`
+- Mejoras en docstrings de `comparador/new_new_cla.py`
+- Actualizaciones de configuración en `pyproject.toml` y `uv.lock`
 
->>>>>>> 9ce29b0aa2ccad0531e19b0e03694543c410cf1e
+## 0.3.1
+### Agregado
+- Dockerizar proyecto con UV
 
 ## 0.3.0
 ### Agregado
