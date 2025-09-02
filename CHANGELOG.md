@@ -8,10 +8,6 @@
 - Mejoras en docstrings de `comparador/new_new_cla.py`
 - Actualizaciones de configuración en `pyproject.toml` y `uv.lock`
 
-## 0.3.1
-### Agregado
-- Dockerizar proyecto con UV
-
 ## 0.3.0
 ### Agregado
 - Mejora en estructura de carpetas
