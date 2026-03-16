@@ -3,6 +3,7 @@
 from datetime import date, datetime
 from captchapass import predict
 from playwright.sync_api import Page, sync_playwright
+from pathlib import PurePosixPath
 from utiles.decorators import retry_function, exp_retry_function
 from utiles.file_tools import clean_txt_folder
 from utiles.fechas import format_date_cmf, consecutive_date_ranges, date_range
@@ -27,7 +28,6 @@ def goto_with_retry(page: Page, url_str: str, timeout: int = TIMEOUT) -> Any:
 
 
 @exp_retry_function
-@retry_function
 def get_cartola_from_cmf(
     start_date: date | datetime,
     end_date: date | datetime,
@@ -78,8 +78,8 @@ def get_cartola_from_cmf(
             raise ValueError("El captcha no tiene 6 caracteres")
 
         # Llenamos el formulario
-        page.evaluate(f"document.querySelector('#txt_inicio').value = '{start_date}';")
-        page.evaluate(f"document.querySelector('#txt_termino').value = '{end_date}';")
+        page.locator("#txt_inicio").fill(start_date)
+        page.locator("#txt_termino").fill(end_date)
         page.get_by_label("Ingrese los caracteres de la").fill(prediction)
 
         fetch_cartola_data(
@@ -109,7 +109,8 @@ def fetch_cartola_data(
             download = download_info.value
             if download:
                 temp_file_path.rename(correct_folder / f"{prediction}.png")
-                download_path = cartolas_txt_folder / download.suggested_filename
+                safe_filename = PurePosixPath(download.suggested_filename).name
+                download_path = cartolas_txt_folder / safe_filename
                 download.save_as(download_path)
                 print(f"Archivo descargado como: {download_path}") if verbose else None
                 # ACA FALTA CHEQUEAR EL TAMAÑO

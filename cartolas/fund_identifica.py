@@ -23,7 +23,7 @@ def get_fund_identification() -> str:
     }
 
     # Realizar la solicitud con los headers
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=30)
 
     return response.text
 

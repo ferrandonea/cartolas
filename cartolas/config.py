@@ -1,5 +1,6 @@
 from pathlib import Path
 from datetime import date, datetime, timedelta
+from dotenv import dotenv_values
 import polars as pl
 
 # Data subfolder
@@ -113,8 +114,7 @@ SOYFOCUS_BY_RUN_PARQUET_FILE_PATH = PARQUET_FOLDER / SOYFOCUS_BY_RUN_FILE_NAME
 SOYFOCUS_TAC_PARQUET_FILE_PATH = PARQUET_FOLDER / SOYFOCUS_TAC_FILE_NAME
 
 # COSAS DE MAIL
-SENDER_MAIL, SENDER_NAME, TO_EMAILS = (
-    "francisco@soyfocus.com",
-    "Francisco",
-    ["francisco@soyfocus.com"],
-)
+_env = dotenv_values(".env")
+SENDER_MAIL = _env.get("SENDER_MAIL", "")
+SENDER_NAME = _env.get("SENDER_NAME", "")
+TO_EMAILS = [SENDER_MAIL]

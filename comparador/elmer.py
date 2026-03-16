@@ -86,7 +86,13 @@ def get_elmer_data(category_id: int, verbose: bool = False) -> dict:
     # Construye la URL completa para la categoría específica
     url = ELMER_URL_BASE + str(category_id)
     # Realiza la petición HTTP GET
-    response = requests.get(url)
+    response = requests.get(url, timeout=30)
+
+    if response.status_code != 200:
+        print(
+            f"Error HTTP {response.status_code} al obtener categoría {category_id}"
+        ) if verbose else None
+        return None
 
     try:
         # Intenta parsear la respuesta como JSON
