@@ -354,8 +354,10 @@ def generate_cla_data(
     excel_categorias = None
     if custom_mapping is not None:
         custom_num_cats = list(set(custom_mapping.values()))
-        # Obtener mapeo NUM_CATEGORIA → nombre de categoría desde Elmer (fuente autoritativa)
-        elmer_df = last_elmer_data_as_polars()
+        # Obtener mapeo NUM_CATEGORIA → nombre de categoría desde Elmer (solo retail)
+        elmer_df = last_elmer_data_as_polars().filter(
+            pl.col("TIPOINV") == "RETAIL / PEQUEÑO INVERSOR"
+        )
         num_to_name = dict(
             elmer_df.filter(pl.col("NUM_CATEGORIA").is_in(custom_num_cats))
             .select("NUM_CATEGORIA", "CATEGORIA")
@@ -369,7 +371,7 @@ def generate_cla_data(
             if num_cat not in num_to_name:
                 raise ValueError(
                     f"NUM_CATEGORIA {num_cat} (para RUN_FM {run_fm}) no tiene "
-                    f"categoría en los datos de Elmer. Verifique el mapping."
+                    f"fondos retail en los datos de Elmer. Verifique el mapping."
                 )
             run_to_new_cat[run_fm] = num_to_name[num_cat]
         # Solo remover categorías default de fondos que tienen reemplazo resuelto
