@@ -10,26 +10,25 @@ series temporales económicas.
 from dotenv import dotenv_values  # Para cargar variables de entorno
 import bcchapi  # API oficial del Banco Central de Chile
 from datetime import datetime, timedelta
+from functools import lru_cache
 import polars as pl  # Biblioteca para procesamiento de datos
 from cartolas.config import BCCH_FOLDER  # Configuración de carpetas
 import json
 from pathlib import Path  # Manejo de rutas de archivos
 
-env_variables = dotenv_values(".env")  # Cargamos variables de entorno desde .env
-
 # Definimos la fecha hasta la cual queremos datos (ayer)
 LAST_DATE = datetime.now() - timedelta(days=1)
-
-# Credenciales para la API del Banco Central
-BCCH_PASS = env_variables["BCCH_PASS"]
-BCCH_USER = env_variables["BCCH_USER"]
 
 # Rutas para guardar y leer datos
 PARQUET_PATH = BCCH_FOLDER / "bcch.parquet"  # Datos en formato Parquet
 JSON_PATH = BCCH_FOLDER / "bcentral_tickers.json"  # Metadatos de series temporales
 
-# Hacemos login
-BCCh = bcchapi.Siete(usr=BCCH_USER, pwd=BCCH_PASS)  # Inicializamos la API del BCCh
+
+@lru_cache(maxsize=1)
+def _get_bcch_client() -> bcchapi.Siete:
+    """Crea y cachea el cliente de la API del Banco Central. Solo hace login cuando se necesita."""
+    env_variables = dotenv_values(".env")
+    return bcchapi.Siete(usr=env_variables["BCCH_USER"], pwd=env_variables["BCCH_PASS"])
 
 
 def read_bcentral_tickers(path: Path = JSON_PATH):
@@ -75,9 +74,9 @@ def baja_datos_bcch(
     """
     # Si bfill es True, rellena datos faltantes hacia adelante
     if bfill:
-        return BCCh.cuadro(series=tickers, nombres=nombres, hasta=last_date).ffill()
+        return _get_bcch_client().cuadro(series=tickers, nombres=nombres, hasta=last_date).ffill()
     else:
-        return BCCh.cuadro(series=tickers, nombres=nombres, hasta=last_date)
+        return _get_bcch_client().cuadro(series=tickers, nombres=nombres, hasta=last_date)
 
 
 def baja_bcch_as_polars(
@@ -203,6 +202,7 @@ def update_bcch_parquet(path: str = PARQUET_PATH) -> pl.LazyFrame:
     Returns:
         polars.LazyFrame: LazyFrame con los datos actualizados.
     """
+    df = None
     try:
         # Intenta cargar el archivo Parquet existente
         df = load_bcch_from_parquet()
@@ -214,7 +214,7 @@ def update_bcch_parquet(path: str = PARQUET_PATH) -> pl.LazyFrame:
         print("BCCH: No se encontró el archivo de datos del BCCh")
 
     # Compara la fecha más reciente con la fecha hasta la cual queremos datos
-    if last_date >= LAST_DATE.date():
+    if last_date >= LAST_DATE.date() and df is not None:
         # Si ya tenemos datos actualizados, no hacemos nada
         print("BCCH: No hay datos nuevos del BCCh")
         return df
