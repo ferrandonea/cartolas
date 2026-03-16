@@ -9,12 +9,13 @@ from utiles.file_tools import clean_txt_folder
 from utiles.fechas import format_date_cmf, consecutive_date_ranges, date_range
 from typing import Any
 from pathlib import Path
+from utiles.file_tools import generate_hash_image_name
 from .config import (
     DEFAULT_HEADLESS,
     URL_CARTOLAS,
     VERBOSE,
     TIMEOUT,
-    TEMP_FILE_PWD,
+    TEMP_FOLDER,
     ERROR_FOLDER,
     CORRECT_FOLDER,
     CARTOLAS_FOLDER,
@@ -34,12 +35,15 @@ def get_cartola_from_cmf(
     headless: bool = DEFAULT_HEADLESS,
     url: str = URL_CARTOLAS,
     verbose: bool = VERBOSE,
-    temp_file_path: Path = TEMP_FILE_PWD,
+    temp_file_path: Path = None,
     error_folder: Path = ERROR_FOLDER,
     correct_folder: Path = CORRECT_FOLDER,
     cartolas_txt_folder: Path = CARTOLAS_FOLDER,
 ):
     """Descarga cartolas desde la CMF en unas fechas determinadas"""
+
+    if temp_file_path is None:
+        temp_file_path = TEMP_FOLDER / generate_hash_image_name()
 
     # Aplica la función de formato a las fechas de inicio y fin
     start_date, end_date = map(format_date_cmf, [start_date, end_date])

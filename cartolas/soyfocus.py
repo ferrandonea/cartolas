@@ -83,7 +83,7 @@ def create_soyfocus_parquet(
         sort_columns = ["RUN_FM", "FECHA_INF"]
 
     # Lee los datos y comienza el procesamiento
-    lazy_df = read_parquet_cartolas_lazy(parquet_path=allfunds_file, sorted=False)
+    lazy_df = read_parquet_cartolas_lazy(parquet_path=allfunds_file, is_sorted=False)
     lazy_df = (
         # Filtra solo los fondos SoyFocus
         lazy_df.filter(pl.col("RUN_FM").is_in(SOYFOCUS_RUNS))

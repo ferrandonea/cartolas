@@ -5,14 +5,14 @@ from pathlib import Path
 
 
 def read_parquet_cartolas_lazy(
-    parquet_path: str | Path, sorted: bool = True
+    parquet_path: str | Path, is_sorted: bool = True
 ) -> pl.LazyFrame:
     """
     Lee archivos Parquet desde una carpeta de manera perezosa (lazy).
 
     Args:
         parquet_path (str | Path): Ruta a la carpeta que contiene los archivos Parquet.
-        sorted (bool): Si True, ordena el DataFrame resultante por las columnas
+        is_sorted (bool): Si True, ordena el DataFrame resultante por las columnas
                        'FECHA_INF', 'RUN_ADM', 'RUN_FM', 'SERIE'.
 
     Returns:
@@ -27,7 +27,7 @@ def read_parquet_cartolas_lazy(
 
     # Ordenar el DataFrame si se especifica
     return (
-        lazy_df.sort(["FECHA_INF", "RUN_ADM", "RUN_FM", "SERIE"]) if sorted else lazy_df
+        lazy_df.sort(["FECHA_INF", "RUN_ADM", "RUN_FM", "SERIE"]) if is_sorted else lazy_df
     )
 
 

@@ -6,7 +6,7 @@ Contiene funciones para actualizar los datos de las cartolas en un archivo Parqu
 
 from datetime import date
 
-from cartolas.config import FECHA_MINIMA, PARQUET_FILE_PATH, SCHEMA, FECHA_MAXIMA
+from cartolas.config import FECHA_MINIMA, PARQUET_FILE_PATH, SCHEMA, get_fecha_maxima
 from cartolas.download import download_cartolas_range
 from cartolas.read import read_parquet_cartolas_lazy
 from cartolas.save import save_lazyframe_to_parquet
@@ -17,14 +17,12 @@ from utiles.file_tools import clean_txt_folder
 
 import polars as pl
 
-# FECHA_MAXIMA = date(2014, 1, 11)
-
 
 @timer
 def update_parquet(
     parquet_file=PARQUET_FILE_PATH,
     min_date: date = FECHA_MINIMA,
-    max_date: date = FECHA_MAXIMA,
+    max_date: date = None,
     sleep_time: int = 1,
 ) -> None:
     """
@@ -39,6 +37,9 @@ def update_parquet(
     Returns:
         None
     """
+
+    if max_date is None:
+        max_date = get_fecha_maxima()
 
     # TODO: Esto se podría unir con el script de baja diaria de la cartola
     # TODO: Bajar cada día los últimos 30 días por si hay cambios (eso pasa)

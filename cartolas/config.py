@@ -52,21 +52,21 @@ ELMER_FOLDER = CURRENT_FOLDER / ELMER_FOLDER_NAME
 BCCH_FOLDER_NAME = "bcch"
 BCCH_FOLDER = CURRENT_FOLDER / BCCH_FOLDER_NAME
 
-# El import es acá para evitar importaciones circulares con file_tools.py
-from utiles.file_tools import generate_hash_image_name  # noqa: E402
-
 # Carpeta donde se guardan los archivos temporales
 TEMP_FOLDER_NAME = "temp"
 TEMP_FOLDER = IMAGES_FOLDER / TEMP_FOLDER_NAME
-TEMP_FILE_NAME = generate_hash_image_name()
-TEMP_FILE_PWD = TEMP_FOLDER / TEMP_FILE_NAME
 
 ## FECHAS
 FECHA_MINIMA = date(2007, 12, 31)
-# Esto considera los días para atrás que es la última cartola
-# Si es antes de las 11 es el de ante ayer, si es después de las 11 es el de ayer
-DIAS_ATRAS = 1 if datetime.now().hour > 10 else 2
-FECHA_MAXIMA = datetime.now().date() - timedelta(days=DIAS_ATRAS)
+
+
+def get_fecha_maxima() -> date:
+    """Calcula la fecha máxima de cartola disponible según la hora actual."""
+    dias_atras = 1 if datetime.now().hour > 10 else 2
+    return datetime.now().date() - timedelta(days=dias_atras)
+
+
+FECHA_MAXIMA = get_fecha_maxima()
 INITIAL_DATE_RANGE: int = 33  # días que baja la primera vez
 
 # Características de polars
