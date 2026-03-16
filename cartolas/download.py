@@ -15,6 +15,7 @@ from .config import (
     URL_CARTOLAS,
     VERBOSE,
     TIMEOUT,
+    DOWNLOAD_TIMEOUT,
     TEMP_FOLDER,
     ERROR_FOLDER,
     CORRECT_FOLDER,
@@ -108,7 +109,7 @@ def fetch_cartola_data(
 ):
     """Es la función que hace la baja de la cartola"""
     try:
-        with page.expect_download(timeout=TIMEOUT) as download_info:
+        with page.expect_download(timeout=DOWNLOAD_TIMEOUT) as download_info:
             page.get_by_role("button", name="GENERAR ARCHIVO").click(timeout=TIMEOUT)
         download = download_info.value
         if download:
