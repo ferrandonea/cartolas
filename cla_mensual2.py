@@ -13,7 +13,7 @@ Diferencias con cla_mensual.py:
 El reporte se guarda en un archivo Excel con la fecha del último día del mes anterior.
 """
 
-from comparador.cla_monthly_custom import generate_cla_data_with_custom_mapping
+from comparador.cla_monthly import generate_cla_data
 from cartolas.update_by_year import update_parquet_by_year
 from eco.bcentral import update_bcch_parquet
 from datetime import date
@@ -25,7 +25,6 @@ REPORT_DATE = ultimo_dia_mes_anterior(date.today())
 
 # Configuración de rutas y nombres de archivos
 CLA_FOLDER = Path("cla_mensual2")  # Carpeta diferente para no sobrescribir el reporte original
-CLA_FOLDER.mkdir(exist_ok=True)  # Crear carpeta si no existe
 CLA_EXCEL = CLA_FOLDER / f"cla2_{REPORT_DATE.strftime('%Y%m%d')}.xlsx"
 
 # MAPPING PERSONALIZADO DE CATEGORÍAS
@@ -51,6 +50,7 @@ def main():
 
     El reporte se guarda en un archivo Excel con la fecha del último día del mes anterior.
     """
+    CLA_FOLDER.mkdir(exist_ok=True)
     print(f"📄 Generando reporte personalizado en: {CLA_EXCEL}")
     print(f"🔄 Mapping personalizado:")
     for run, categoria in CUSTOM_CATEGORY_MAPPING.items():
@@ -67,12 +67,11 @@ def main():
     # Paso 3: Generar reporte CLA mensual con categorías personalizadas
     print("📊 Paso 3/3: Generando reporte CLA con categorías personalizadas...")
 
-    # Usar la función personalizada que aplica el CUSTOM_CATEGORY_MAPPING
-    generate_cla_data_with_custom_mapping(
+    generate_cla_data(
         custom_mapping=CUSTOM_CATEGORY_MAPPING,
         save_xlsx=True,
-        xlsx_name=CLA_EXCEL,
-        excel_steps="all"
+        xlsx_name=str(CLA_EXCEL),
+        excel_steps="minimal",
     )
 
     print(f"\n✅ Reporte generado exitosamente: {CLA_EXCEL}")

@@ -20,7 +20,6 @@ from typing import Literal
 
 import polars as pl
 import pandas as pd
-import numpy as np
 
 from comparador.merge import merge_cartolas_with_categories
 from utiles.fechas import (
@@ -37,6 +36,13 @@ AÑOS_CLA = [1, 3, 5]  # Períodos anuales a analizar (1, 3 y 5 años)
 CATEGORIAS_CLA = ["CONSERVADOR", "MODERADO", "AGRESIVO"]  # Categorías base de fondos
 # Genera las categorías completas agregando el prefijo "BALANCEADO"
 CATEGORIAS_ELMER = [f"BALANCEADO {categoria}" for categoria in CATEGORIAS_CLA]
+
+# Mapeo default: RUN_FM SoyFocus → (categoría default, nombre display)
+SOYFOCUS_DEFAULTS = {
+    9810: ("BALANCEADO CONSERVADOR", "Fondo Conservador Focus"),
+    9809: ("BALANCEADO MODERADO", "Fondo Moderado Focus"),
+    9811: ("BALANCEADO AGRESIVO", "Fondo Arriesgado Focus"),
+}
 
 # Columnas relevantes para el análisis final
 RELEVANT_COLUMNS = [
@@ -105,7 +111,7 @@ def generate_cla_dates(input_date: date = date.today()) -> dict[int, date]:
 
 
 @timer
-def add_cumulative_returns(df: pl.DataFrame) -> pl.DataFrame:
+def add_cumulative_returns(df: pl.LazyFrame) -> pl.LazyFrame:
     """
     Calcula las rentabilidades acumuladas para cada fondo y serie.
 
@@ -113,10 +119,10 @@ def add_cumulative_returns(df: pl.DataFrame) -> pl.DataFrame:
     utilizando el producto acumulativo de las rentabilidades diarias.
 
     Args:
-        df (pl.DataFrame): DataFrame con las rentabilidades diarias por fondo y serie
+        df (pl.LazyFrame): LazyFrame con las rentabilidades diarias por fondo y serie
 
     Returns:
-        pl.DataFrame: DataFrame original con una nueva columna 'RENTABILIDAD_ACUMULADA'
+        pl.LazyFrame: LazyFrame original con una nueva columna 'RENTABILIDAD_ACUMULADA'
             que contiene el producto acumulativo de las rentabilidades diarias
     """
     # Ordenar el DataFrame para asegurar el cálculo correcto de acumulados
@@ -286,6 +292,7 @@ def generate_cla_data(
     save_xlsx: bool = False,
     xlsx_name: str = "cla_data.xlsx",
     excel_steps: EXCEL_STEPS = "minimal",
+    custom_mapping: dict[int, int] | None = None,
 ) -> pl.DataFrame:
     """
     Genera el DataFrame con los datos necesarios para el análisis CLA.
@@ -340,7 +347,44 @@ def generate_cla_data(
     dfs_intermedios = {}
 
     # Paso 1: Obtener datos base y agregar categorías
-    df_base: pl.LazyFrame = merge_cartolas_with_categories()
+    df_base: pl.LazyFrame = merge_cartolas_with_categories(custom_mapping=custom_mapping)
+
+    # Reemplazar categorías default por las del custom_mapping
+    excel_categorias = None
+    if custom_mapping is not None:
+        custom_num_cats = list(set(custom_mapping.values()))
+        # Obtener mapeo NUM_CATEGORIA → nombre de categoría
+        num_to_name = dict(
+            df_base.filter(pl.col("NUM_CATEGORIA").is_in(custom_num_cats))
+            .select("NUM_CATEGORIA", "CATEGORIA")
+            .unique()
+            .collect()
+            .iter_rows()
+        )
+        # RUN_FM → nueva categoría (falla si alguna categoría no existe en Elmer)
+        run_to_new_cat = {}
+        for run_fm, num_cat in custom_mapping.items():
+            if num_cat not in num_to_name:
+                raise ValueError(
+                    f"NUM_CATEGORIA {num_cat} (para RUN_FM {run_fm}) no tiene "
+                    f"fondos retail en los datos de Elmer. Verifique el mapping."
+                )
+            run_to_new_cat[run_fm] = num_to_name[num_cat]
+        # Solo remover categorías default de fondos que tienen reemplazo resuelto
+        cats_to_remove = {
+            SOYFOCUS_DEFAULTS[run_fm][0]
+            for run_fm in run_to_new_cat
+            if run_fm in SOYFOCUS_DEFAULTS
+        }
+        categories = [c for c in categories if c not in cats_to_remove] + list(
+            run_to_new_cat.values()
+        )
+        # Construir lista de categorías para la hoja Excel
+        excel_categorias = [
+            (run_to_new_cat[run_fm], display) if run_fm in run_to_new_cat else (cat, display)
+            for run_fm, (cat, display) in SOYFOCUS_DEFAULTS.items()
+        ]
+
     if save_xlsx and excel_steps == "all":
         dfs_intermedios[EXCEL_SHEETS["datos_base"]] = df_base.collect()
 
@@ -414,12 +458,12 @@ def generate_cla_data(
                     )
                     worksheet.set_column(idx, idx, max_length * 1.2)
             # Crear hoja 10 Salida con formato visual
-            write_hoja_10_salida(writer, df_stats)
+            write_hoja_10_salida(writer, df_stats, categorias=excel_categorias)
 
     return df_with_stats
 
 
-def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
+def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida", categorias=None):
     """
     Escribe la hoja 10 Salida en el Excel, con formato visual tipo bloque por categoría.
 
@@ -434,6 +478,7 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
         writer: ExcelWriter de pandas (engine xlsxwriter)
         df_stats: DataFrame de estadísticas (polars)
         sheet_name: nombre de la hoja
+        categorias: lista de tuplas (CATEGORIA, display_name). Si es None usa las default.
     """
     worksheet = writer.book.add_worksheet(sheet_name)
     writer.sheets[sheet_name] = worksheet
@@ -499,11 +544,10 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida"):
 
     # Estructura de la hoja
     periodos = ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y"]  # Períodos a mostrar
-    categorias = [
-        ("BALANCEADO CONSERVADOR", "Fondo Conservador Focus"),
-        ("BALANCEADO MODERADO", "Fondo Moderado Focus"),
-        ("BALANCEADO AGRESIVO", "Fondo Arriesgado Focus"),
-    ]
+    if categorias is None:
+        categorias = [
+            (cat, display) for _, (cat, display) in SOYFOCUS_DEFAULTS.items()
+        ]
     filas = [
         "Fondo",
         "Ranking vs Comparables",
