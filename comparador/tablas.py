@@ -1,24 +1,9 @@
 from comparador.merge import merge_cartolas_with_categories
+from comparador.cla_monthly import add_cumulative_returns
 import polars as pl
 from datetime import date
 import numpy as np
-
-
-def add_cumulative_returns(df: pl.DataFrame):
-    # Ordenar el DataFrame por RUN_FM, SERIE y FECHA_INF
-    sorted_df = df.sort(["RUN_FM", "SERIE", "FECHA_INF"])
-
-    # Agrupar por RUN_FM y SERIE, y calcular la rentabilidad acumulada
-    return sorted_df.with_columns(
-        [
-            pl.col("RENTABILIDAD_DIARIA_PESOS")
-            .cum_prod()
-            .over(["RUN_FM", "SERIE"])
-            .fill_nan(1)
-            .fill_null(1)
-            .alias("RENTABILIDAD_ACUMULADA")
-        ]
-    )
+from utiles.fechas import date_n_months_ago, date_n_years_ago, ultimo_dia_año_anterior
 
 
 def create_returns_pivot_table(
@@ -64,24 +49,14 @@ def filter_pivot_by_selected_dates(pivot_df: pl.DataFrame):
 
     selected_dates = {
         "OM": max_date,
-        "1M": date(2025, 2, 28),
-        "3M": date(2024, 12, 31),
-        "6M": date(2024, 9, 30),
-        "1Y": date(2024, 3, 31),
-        "3Y": date(2022, 3, 31),
-        "5Y": date(2020, 3, 31),
-        "YTD": date(2024, 12, 31),
+        "1M": date_n_months_ago(1, max_date),
+        "3M": date_n_months_ago(3, max_date),
+        "6M": date_n_months_ago(6, max_date),
+        "1Y": date_n_years_ago(1, max_date),
+        "3Y": date_n_years_ago(3, max_date),
+        "5Y": date_n_years_ago(5, max_date),
+        "YTD": ultimo_dia_año_anterior(max_date),
     }
-
-    # selected_dates = {
-    #     "OM": max_date,
-    #     "1M": last_day_n_months_ago(max_date, 1),
-    #     "3M": last_day_n_months_ago(max_date, 3),
-    #     "6M": last_day_n_months_ago(max_date, 6),
-    #     "1Y": last_day_n_months_ago_by_year(max_date, 1),
-    #     "3Y": last_day_n_months_ago_by_year(max_date, 3),
-    #     "5Y": last_day_n_months_ago_by_year(max_date, 5),
-    # }
     selected_dates_list = list(selected_dates.values())
     pivot_df = pivot_df.filter(pl.col("FECHA_INF").is_in(selected_dates_list))
     print(pivot_df)
