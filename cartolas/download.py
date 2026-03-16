@@ -81,9 +81,9 @@ def get_cartola_from_cmf(
             temp_file_path.rename(error_folder / f"{prediction}.png")
             raise ValueError("El captcha no tiene 6 caracteres")
 
-        # Llenamos el formulario
-        page.locator("#txt_inicio").fill(start_date)
-        page.locator("#txt_termino").fill(end_date)
+        # Llenamos el formulario (evaluate para evitar eventos de datepicker)
+        page.locator("#txt_inicio").evaluate("(el, val) => el.value = val", start_date)
+        page.locator("#txt_termino").evaluate("(el, val) => el.value = val", end_date)
         page.get_by_label("Ingrese los caracteres de la").fill(prediction)
 
         fetch_cartola_data(
@@ -108,16 +108,15 @@ def fetch_cartola_data(
 ):
     """Es la función que hace la baja de la cartola"""
     try:
-        with page.expect_download() as download_info:
+        with page.expect_download(timeout=TIMEOUT) as download_info:
             page.get_by_role("button", name="GENERAR ARCHIVO").click(timeout=TIMEOUT)
-            download = download_info.value
-            if download:
-                temp_file_path.rename(correct_folder / f"{prediction}.png")
-                safe_filename = PurePosixPath(download.suggested_filename).name
-                download_path = cartolas_txt_folder / safe_filename
-                download.save_as(download_path)
-                print(f"Archivo descargado como: {download_path}") if verbose else None
-                # ACA FALTA CHEQUEAR EL TAMAÑO
+        download = download_info.value
+        if download:
+            temp_file_path.rename(correct_folder / f"{prediction}.png")
+            safe_filename = PurePosixPath(download.suggested_filename).name
+            download_path = cartolas_txt_folder / safe_filename
+            download.save_as(download_path)
+            print(f"Archivo descargado como: {download_path}") if verbose else None
     except Exception as e:
         print("Error en la descarga") if verbose else None
         print(f"Detalles: {e}") if verbose else None
