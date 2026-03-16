@@ -303,8 +303,9 @@ def prepare_relevant_categories(
             )
         elmer_df = elmer_df.with_columns(soyfocus_expr.alias("RUN_SOYFOCUS"))
 
-        # Construir expresión CATEGORIA en una sola pasada
+        # Construir expresiones CATEGORIA y NUM_CATEGORIA en una sola pasada
         cat_expr = pl.col("CATEGORIA")
+        num_cat_expr = pl.col("NUM_CATEGORIA")
         for run_fm, num_categoria in custom_mapping.items():
             if num_categoria in num_to_cat_name:
                 cat_expr = (
@@ -312,7 +313,15 @@ def prepare_relevant_categories(
                     .then(pl.lit(num_to_cat_name[num_categoria]))
                     .otherwise(cat_expr)
                 )
-        elmer_df = elmer_df.with_columns(cat_expr.alias("CATEGORIA"))
+                num_cat_expr = (
+                    pl.when(pl.col("RUN_FM") == run_fm)
+                    .then(pl.lit(num_categoria))
+                    .otherwise(num_cat_expr)
+                )
+        elmer_df = elmer_df.with_columns(
+            cat_expr.alias("CATEGORIA"),
+            num_cat_expr.alias("NUM_CATEGORIA"),
+        )
 
     elmer_df = elmer_df.with_columns(
         pl.lit("B").alias(

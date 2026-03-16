@@ -22,6 +22,7 @@ import polars as pl
 import pandas as pd
 
 from comparador.merge import merge_cartolas_with_categories
+from comparador.elmer import last_elmer_data_as_polars
 from utiles.fechas import (
     date_n_months_ago,
     date_n_years_ago,
@@ -353,9 +354,10 @@ def generate_cla_data(
     excel_categorias = None
     if custom_mapping is not None:
         custom_num_cats = list(set(custom_mapping.values()))
-        # Obtener mapeo NUM_CATEGORIA → nombre de categoría
+        # Obtener mapeo NUM_CATEGORIA → nombre de categoría desde Elmer (fuente autoritativa)
+        elmer_df = last_elmer_data_as_polars()
         num_to_name = dict(
-            df_base.filter(pl.col("NUM_CATEGORIA").is_in(custom_num_cats))
+            elmer_df.filter(pl.col("NUM_CATEGORIA").is_in(custom_num_cats))
             .select("NUM_CATEGORIA", "CATEGORIA")
             .unique()
             .collect()
@@ -367,7 +369,7 @@ def generate_cla_data(
             if num_cat not in num_to_name:
                 raise ValueError(
                     f"NUM_CATEGORIA {num_cat} (para RUN_FM {run_fm}) no tiene "
-                    f"fondos retail en los datos de Elmer. Verifique el mapping."
+                    f"categoría en los datos de Elmer. Verifique el mapping."
                 )
             run_to_new_cat[run_fm] = num_to_name[num_cat]
         # Solo remover categorías default de fondos que tienen reemplazo resuelto
