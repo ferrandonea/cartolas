@@ -27,19 +27,20 @@ def retry_function(
         Exception: Si la función no se puede ejecutar exitosamente después de los intentos especificados.
     """
 
+    @wraps(func)
     def wrapper(*args, **kwargs) -> T:
+        last_exception = None
         attempts = 0
         while attempts < max_attempts:
             try:
                 return func(*args, **kwargs)
             except Exception as e:
+                last_exception = e
                 attempts += 1
                 print(f"Error en {func.__name__}: {e}")
                 print(f"Intento {attempts}/{max_attempts}. Esperando {delay} segundos")
                 time.sleep(delay)
-        raise Exception(
-            f"No se pudo ejecutar {func.__name__} después de {max_attempts} intentos"
-        )
+        raise last_exception
 
     return wrapper
 
@@ -62,21 +63,22 @@ def exp_retry_function(
         Exception: Si la función no se puede ejecutar exitosamente después de los intentos especificados.
     """
 
+    @wraps(func)
     def wrapper(*args, **kwargs) -> T:
+        last_exception = None
         attempts = 0
         while attempts < max_attempts:
             try:
                 return func(*args, **kwargs)
             except Exception as e:
+                last_exception = e
                 attempts += 1
                 print(f"Error en {func.__name__}: {e}")
                 print(
                     f"Intento {attempts}/{max_attempts}. Esperando {pow(2, attempts)} segundos"
                 )
                 time.sleep(pow(2, attempts))
-        raise Exception(
-            f"No se pudo ejecutar {func.__name__} después de {max_attempts} intentos"
-        )
+        raise last_exception
 
     return wrapper
 

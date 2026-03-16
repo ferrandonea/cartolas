@@ -1,9 +1,7 @@
 """Utilidades de manejo de archivos"""
 
 import json
-import hashlib
-import random
-import string
+import secrets
 from pathlib import Path
 from datetime import datetime
 from typing import Union, Any, Optional
@@ -23,16 +21,9 @@ def generate_hash_name(length=HASH_LENGTH) -> str:
         length (int, opcional): Longitud del hash generado. Por defecto es 12.
 
     Returns:
-        str: Los primeros 'length' caracteres del hash SHA-256 de una cadena aleatoria.
+        str: Los primeros 'length' caracteres de un token hexadecimal aleatorio seguro.
     """
-    # Genera una cadena aleatoria
-    random_string = "".join(
-        random.choices(string.ascii_letters + string.digits, k=length)
-    )
-    # Crea un hash de la cadena aleatoria
-    hash_object = hashlib.sha256(random_string.encode())
-    # Devuelve los primeros 'length' caracteres del hash
-    return hash_object.hexdigest()[:length]
+    return secrets.token_hex(length)[:length]
 
 
 def generate_hash_image_name(length=HASH_LENGTH) -> str:
