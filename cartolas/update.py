@@ -44,7 +44,7 @@ def get_year_parquet_path(year: int, base_dir: Path) -> Path:
 
 @timer
 def update_parquet(
-    parquet_file=PARQUET_FILE_PATH,
+    parquet_file=None,
     min_date: date = FECHA_MINIMA,
     max_date: date = FECHA_MAXIMA,
     sleep_time: int = 1,
@@ -55,11 +55,14 @@ def update_parquet(
 
     Args:
         parquet_file (Path): Ruta del archivo Parquet (monolítico) o directorio (by_year).
+            Si None, usa PARQUET_FILE_PATH o PARQUET_FOLDER_YEAR según by_year.
         min_date (date): Fecha mínima para la actualización.
         max_date (date): Fecha máxima para la actualización.
         sleep_time (int): Tiempo de espera entre descargas en segundos.
         by_year (bool): Si True, usa archivos separados por año.
     """
+    if parquet_file is None:
+        parquet_file = PARQUET_FOLDER_YEAR if by_year else PARQUET_FILE_PATH
     if by_year:
         _update_by_year(parquet_file, min_date, max_date, sleep_time)
     else:
