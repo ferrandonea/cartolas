@@ -45,7 +45,11 @@ def get_cartola_from_cmf(
 ):
     """Descarga cartolas desde la CMF en unas fechas determinadas"""
 
+    for folder in (error_folder, correct_folder, cartolas_txt_folder):
+        folder.mkdir(parents=True, exist_ok=True)
+
     if temp_file_path is None:
+        TEMP_FOLDER.mkdir(parents=True, exist_ok=True)
         temp_file_path = TEMP_FOLDER / generate_hash_image_name()
 
     start_date, end_date = map(format_date_cmf, [start_date, end_date])
