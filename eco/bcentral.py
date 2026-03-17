@@ -25,10 +25,24 @@ JSON_PATH = BCCH_FOLDER / "bcentral_tickers.json"  # Metadatos de series tempora
 
 
 @lru_cache(maxsize=1)
+def _get_credentials():
+    env_variables = dotenv_values(".env")
+    return env_variables["BCCH_USER"], env_variables["BCCH_PASS"]
+
+
+@lru_cache(maxsize=1)
 def _get_bcch_client() -> bcchapi.Siete:
     """Crea y cachea el cliente de la API del Banco Central. Solo hace login cuando se necesita."""
-    env_variables = dotenv_values(".env")
-    return bcchapi.Siete(usr=env_variables["BCCH_USER"], pwd=env_variables["BCCH_PASS"])
+    user, pwd = _get_credentials()
+    return bcchapi.Siete(usr=user, pwd=pwd)
+
+
+@lru_cache(maxsize=1)
+def _get_tickers_data():
+    datos = read_bcentral_tickers()
+    nombres = list(datos.keys())
+    tickers = [datos[nombre]["TICKER"] for nombre in nombres]
+    return datos, nombres, tickers
 
 
 def read_bcentral_tickers(path: Path = JSON_PATH):
@@ -46,17 +60,9 @@ def read_bcentral_tickers(path: Path = JSON_PATH):
         return json.load(f)
 
 
-# Cargamos los datos de tickers y preparamos listas de nombres y códigos
-DATOS_JSON = read_bcentral_tickers()  # Diccionario con metadatos de series
-NOMBRES = list(DATOS_JSON.keys())  # Lista de nombres de series (ej: "DOLAR", "EURO")
-TICKERS = [
-    DATOS_JSON[nombre]["TICKER"] for nombre in NOMBRES
-]  # Lista de códigos de series
-
-
 def baja_datos_bcch(
-    tickers: str = TICKERS,
-    nombres: str = NOMBRES,
+    tickers=None,
+    nombres=None,
     bfill: bool = True,
     last_date: datetime = LAST_DATE,
 ):
@@ -72,16 +78,20 @@ def baja_datos_bcch(
     Returns:
         pandas.DataFrame: DataFrame con las series temporales solicitadas, indexado por fecha.
     """
-    # Si bfill es True, rellena datos faltantes hacia adelante
+    if tickers is None or nombres is None:
+        _, default_nombres, default_tickers = _get_tickers_data()
+        tickers = tickers or default_tickers
+        nombres = nombres or default_nombres
+    client = _get_bcch_client()
     if bfill:
-        return _get_bcch_client().cuadro(series=tickers, nombres=nombres, hasta=last_date).ffill()
+        return client.cuadro(series=tickers, nombres=nombres, hasta=last_date).ffill()
     else:
-        return _get_bcch_client().cuadro(series=tickers, nombres=nombres, hasta=last_date)
+        return client.cuadro(series=tickers, nombres=nombres, hasta=last_date)
 
 
 def baja_bcch_as_polars(
-    tickers: str = TICKERS,
-    nombres: str = NOMBRES,
+    tickers=None,
+    nombres=None,
     bfill: bool = True,
     last_date: datetime = LAST_DATE,
     df_index_name: str = "FECHA_INF",
@@ -124,9 +134,9 @@ def baja_dolar_observado_as_polars(as_lazy: bool = False):
     Returns:
         polars.DataFrame o polars.LazyFrame: DataFrame con los datos del dólar observado.
     """
-    # Descarga solo la serie del dólar observado
+    datos, _, _ = _get_tickers_data()
     df = baja_bcch_as_polars(
-        [DATOS_JSON["DOLAR"]["TICKER"]], ["DOLAR"], as_lazy=as_lazy
+        [datos["DOLAR"]["TICKER"]], ["DOLAR"], as_lazy=as_lazy
     )
     return df
 
@@ -141,9 +151,9 @@ def baja_dolar_y_euro_as_polars(as_lazy: bool = False):
     Returns:
         polars.DataFrame o polars.LazyFrame: DataFrame con los datos del dólar y euro.
     """
-    # Descarga las series del dólar y euro
+    datos, _, _ = _get_tickers_data()
     df = baja_bcch_as_polars(
-        [DATOS_JSON["DOLAR"]["TICKER"], DATOS_JSON["EURO"]["TICKER"]],
+        [datos["DOLAR"]["TICKER"], datos["EURO"]["TICKER"]],
         ["DOLAR", "EUR"],
         as_lazy=as_lazy,
     )

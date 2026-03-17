@@ -86,7 +86,7 @@ def cmf_text_to_df(text: str) -> pl.DataFrame:
     return df
 
 
-def download_fund_identification() -> str:
+def download_fund_identification() -> pl.DataFrame:
     """Descarga el texto de la identificación de fondos mutuos desde la CMF"""
     text_cmf = get_fund_identification()
     df = cmf_text_to_df(text_cmf)
@@ -119,33 +119,3 @@ def download_fund_identification() -> str:
     ]
     # df.dtypes = [pl.Utf8, pl.Utf8, pl.Utf8, pl.Utf8, pl.Utf8, pl.Date, pl.Utf8, pl.Utf8, pl.Date, pl.Date, pl.Utf8]
     return df
-
-
-if __name__ == "__main__":
-    text_cmf = get_fund_identification()
-    print(text_cmf)
-    # print("Muestra del texto original:")
-    # print(text_cmf.split("\n")[0:3])
-
-    # df = cmf_text_to_df(text_cmf)
-    # print("\nDataFrame procesado:")
-    # print(df.head())
-
-    # print("\nTipos de datos:")
-    # print(df.schema)
-
-    # # Verificar que las fechas se procesaron correctamente
-    # print("\nEjemplo de fechas procesadas:")
-    # print(df.select(["NOMBRE_CORTO", "FECHA_DEPOSITO", "FECHA_INICIO"]).head())
-
-    # # Guardar el DataFrame
-    # df.write_csv("data/fondos_identificacion.csv")
-
-    # # Análisis básico
-    # print("\nNúmero de fondos por administradora:")
-    # print(
-    #     df.group_by("NOMBRE_ADM")
-    #     .agg(pl.count("RUN_FM").alias("NUM_FONDOS"))
-    #     .sort("NUM_FONDOS", descending=True)
-    #     .head(10)
-    # )

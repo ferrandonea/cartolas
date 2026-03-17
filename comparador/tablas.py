@@ -1,9 +1,14 @@
 from comparador.merge import merge_cartolas_with_categories
-from comparador.cla_monthly import add_cumulative_returns
 import polars as pl
 from datetime import date
 import numpy as np
-from utiles.fechas import date_n_months_ago, date_n_years_ago, ultimo_dia_año_anterior
+from utiles.polars_utils import add_cumulative_returns
+from utiles.fechas import (
+    date_n_months_ago,
+    date_n_years_ago,
+    ultimo_dia_mes_anterior,
+    ultimo_dia_año_anterior,
+)
 
 
 def create_returns_pivot_table(
@@ -43,24 +48,26 @@ def create_returns_pivot_table(
     return pivot_df.sort("FECHA_INF")
 
 
-def filter_pivot_by_selected_dates(pivot_df: pl.DataFrame):
+def filter_pivot_by_selected_dates(pivot_df: pl.DataFrame) -> dict[str, pl.DataFrame]:
     max_date_pl = pivot_df.select("FECHA_INF").max()
     max_date = max_date_pl.to_series().to_list()[0]
 
     selected_dates = {
         "OM": max_date,
-        "1M": date_n_months_ago(1, max_date),
-        "3M": date_n_months_ago(3, max_date),
-        "6M": date_n_months_ago(6, max_date),
+        "1M": ultimo_dia_mes_anterior(max_date),
+        "3M": ultimo_dia_mes_anterior(date_n_months_ago(2, max_date)),
+        "6M": ultimo_dia_mes_anterior(date_n_months_ago(5, max_date)),
         "1Y": date_n_years_ago(1, max_date),
         "3Y": date_n_years_ago(3, max_date),
         "5Y": date_n_years_ago(5, max_date),
         "YTD": ultimo_dia_año_anterior(max_date),
     }
-    selected_dates_list = list(selected_dates.values())
-    pivot_df = pivot_df.filter(pl.col("FECHA_INF").is_in(selected_dates_list))
-    print(pivot_df)
-    return pivot_df
+
+    return {
+        label: pivot_df.filter(pl.col("FECHA_INF") == d)
+        for label, d in selected_dates.items()
+        if pivot_df.filter(pl.col("FECHA_INF") == d).height > 0
+    }
 
 
 def calculate_relative_returns(pivot_df: pl.DataFrame) -> pl.DataFrame:
@@ -143,31 +150,3 @@ def add_row_statistics(relative_returns: pl.DataFrame) -> pl.DataFrame:
     )
 
     return result_df
-
-
-if __name__ == "__main__":
-    df = merge_cartolas_with_categories()
-    df = add_cumulative_returns(df)
-    df.collect().write_csv("rentabilidades_acumuladas.csv")
-    categoria = "BALANCEADO CONSERVADOR"
-    df = df.filter(pl.col("CATEGORIA") == categoria)
-
-    # Crear y mostrar la tabla pivotada
-    pivot_table = create_returns_pivot_table(df)
-
-    # Guardar los resultados - asegurarse de que son DataFrames regulares
-    if isinstance(df, pl.LazyFrame):
-        df = df.collect()
-    df.write_csv("rentabilidades_acumuladas_moderado.csv")
-    pivot_table.fill_null(1).fill_nan(1).write_csv("tabla_pivotada_rentabilidades.csv")
-    normalized_pivot_table = filter_pivot_by_selected_dates(pivot_table)
-    print(normalized_pivot_table)
-
-    # Calcular los retornos relativos
-    relative_returns = calculate_relative_returns(normalized_pivot_table)
-    print(relative_returns)
-
-    # Agregar estadísticas por fila
-    stats_df = add_row_statistics(relative_returns)
-    print(stats_df)
-    stats_df.write_csv("estadisticas_por_fila_conservador.csv")

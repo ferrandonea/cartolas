@@ -1,5 +1,5 @@
 # Imagenes del modelo
-cartolas/data/images/*/*.png     
+cartolas/data/images/*/*.png
 
 # Cartolas txt
 cartolas/data/txt/*.txt
@@ -189,6 +189,10 @@ cython_debug/
 .DS_Store
 rentabilidades_acumuladas.csv
 
-# Ignorar todo el contenido de cla_mensual
+# Reportes CLA generados
 cla_mensual/
 cla_mensual2/
+
+# CSV de exportación
+apv.csv
+uf.csv
