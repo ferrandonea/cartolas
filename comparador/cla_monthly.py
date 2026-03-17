@@ -247,8 +247,8 @@ def generate_cla_data(
     relevant_columns: list[str] = RELEVANT_COLUMNS,
     save_xlsx: bool = False,
     xlsx_name: str = "cla_data.xlsx",
-    excel_steps: str | None = None,
     custom_mapping: dict[int, int] | None = None,
+    excel_steps: str | None = None,
 ) -> pl.DataFrame:
     """
     Genera el DataFrame con los datos necesarios para el análisis CLA.
