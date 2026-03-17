@@ -1,0 +1,1 @@
+from comparador.cla_monthly import generate_cla_data
