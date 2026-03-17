@@ -53,7 +53,6 @@ def clean_txt_folder(
 
     Args:
         folder (str | Path): Ruta de la carpeta donde buscar los archivos.
-                             Por defecto, CURRENT_FOLDER/DOWNLOAD_FOLDER.
         wildcard (str): Patrón de los archivos a procesar. Por defecto, "ffmm*.txt".
         delete_all (bool): Si es True, elimina todos los archivos que coincidan con el patrón.
                            Si es False, solo elimina archivos menores a min_file_size.
@@ -66,13 +65,11 @@ def clean_txt_folder(
     Note:
         - Si delete_all es False, se asume que los archivos menores a min_file_size no tienen
           información útil y son eliminados.
-        - La función imprime mensajes indicando qué archivos han sido eliminados.
-
     Example:
-        >>> clean_txt_folder(delete_all=True)
+        >>> clean_txt_folder(Path("data/txt"), delete_all=True)
         Archivo ffmm_20230101 borrado
         Archivo ffmm_20230102 borrado
-        >>> clean_txt_folder()
+        >>> clean_txt_folder(Path("data/txt"))
         Archivo ffmm_20230101 borrado porque es menor a 1.00 KB
     """
     folder_path = Path(folder)
