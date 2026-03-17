@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 import polars as pl
 from dotenv import dotenv_values
 
-_env = dotenv_values(".env")
+_env = dotenv_values(Path(__file__).resolve().parent.parent / ".env")
 
 # Data subfolder
 DATA_FOLDER_NAME = "data"
