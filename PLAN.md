@@ -77,6 +77,8 @@ La lógica de update se consolidó en `update.py` con parámetro `by_year`. `upd
 
 ---
 
+## Próxima sesión: E4 (Logging)
+
 ## Orden sugerido para pendientes
 
 1. **E4** — Logging (ya parcialmente hecho en M2 y M3)
