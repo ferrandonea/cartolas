@@ -48,7 +48,7 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 |---|--------|---------|----------|---------|--------|
 | E1 | **Tests**: 67 tests unitarios (fechas, polars_utils, transform, merge, cla_monthly) | Muy alto | 2-3 días | `tests/` (5 archivos) | **DONE** |
 | E2 | **Reportes livianos**: Excel solo con hoja "Salida" (10KB/5seg vs 90MB/6min). Eliminadas hojas 1-9, `dfs_intermedios`, `excel_steps` (deprecated con warning) | Alto | 1 día | `comparador/cla_monthly.py`, callers | **DONE** |
-| E3 | **CLI unificado**: reemplazar 5 scripts raíz sueltos por un CLI con `click` o `typer` (`cartolas update`, `cartolas report cla`, etc.) | Medio | 1 día | Scripts raíz + nuevo `cli.py` | PENDIENTE |
+| E3 | **CLI unificado**: reemplazar 5 scripts raíz por CLI con Click (`cartolas update`, `cartolas report cla`, etc.). Eliminados scripts raíz, entry point en `pyproject.toml`, README actualizado | Medio | 1 día | Scripts raíz → `cli.py` | **DONE** |
 | E4 | **Logging**: reemplazar `print()` en decoradores y pipeline por `logging` con niveles configurables | Medio | 0.5 día | Todos los módulos | **DONE** |
 | E5 | **`__init__.py` con exports**: definir API pública de cada paquete para simplificar imports | Bajo | 2h | 4 `__init__.py` | **DONE** |
 | E6 | **Resolver imports circulares**: eliminar el late-import de `file_tools` en `config.py` reestructurando dependencias | Medio | 3h | `file_tools.py`, `download.py`, `update.py` | **DONE** |
@@ -89,8 +89,8 @@ La lógica de update se consolidó en `update.py` con parámetro `by_year`. `upd
 
 Se definieron re-exports en `cartolas/`, `comparador/` y `utiles/`. Se excluyeron deliberadamente `update_parquet` y `update_parquet_by_year` de `cartolas/__init__.py` porque arrastran Playwright y el scraper al importar el paquete. `eco/__init__.py` se dejó vacío por la misma razón: `bcchapi` (y su dependencia transitiva de Pandas) queda encapsulado en `eco.bcentral` — quien lo necesite importa desde ahí directamente.
 
-## Próxima sesión: E3 (CLI unificado)
+### E3: CLI unificado con Click
 
-## Orden sugerido para pendientes
+Se reemplazaron 5 scripts raíz (`actualiza_parquet.py`, `actualiza_parquet_year.py`, `cla_mensual.py`, `soyfocus.py`, `resumen_apv.py`) por un CLI unificado en `cli.py` usando Click. Comandos: `cartolas update [--by-year]`, `cartolas report cla [--output] [--no-update]`, `cartolas report soyfocus`, `cartolas report apv [--output]`. Se agregó `[build-system]` con hatchling en `pyproject.toml` para que `uv` registre el entry point. Imports lazy en cada comando para evitar cargar deps pesadas al arrancar. README reescrito con instalación, comandos y variables de entorno.
 
-1. **E3** — CLI unificado
+## Todas las mejoras completadas

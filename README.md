@@ -1,39 +1,76 @@
 # Cartolas
 
-## Descripción
+Análisis de fondos mutuos chilenos. Descarga cartolas diarias desde la CMF, enriquece con datos del Banco Central (UF, dólar, TPM) y categorización de El Mercurio Inversiones, y genera reportes comparativos de rentabilidad.
 
-Cartolas es un proyecto para gestionar y visualizar información de cartolas diarias.
+## Requisitos
+
+- Python >= 3.11
+- [uv](https://docs.astral.sh/uv/) como gestor de paquetes
+- Playwright (se instala con `uv sync`, requiere `playwright install chromium`)
+- Credenciales API del Banco Central de Chile
 
 ## Instalación
 
-Para instalar las dependencias del proyecto, ejecuta:
-
 ```bash
-DEFINIR
+git clone <repo-url> && cd cartolas
+uv sync
+uv run playwright install chromium
+```
+
+Crear un archivo `.env` en la raíz del proyecto:
+
+```env
+BCCH_USER=tu_email@ejemplo.com
+BCCH_PASS=tu_password
 ```
 
 ## Uso
 
-Para iniciar la aplicación, ejecuta:
-
 ```bash
-uv run python -m cartolas.download_cartolas
+# Actualización diaria: descarga CMF + actualiza BCCh
+cartolas update
+
+# Actualización por año (datos históricos)
+cartolas update --by-year
+
+# Reporte CLA mensual (actualiza datos + genera Excel)
+cartolas report cla
+
+# Reporte CLA sin actualizar datos
+cartolas report cla --no-update
+
+# Reporte CLA con ruta personalizada
+cartolas report cla --output reportes/marzo.xlsx
+
+# Genera parquets SoyFocus (detalle, por RUN y TAC)
+cartolas report soyfocus
+
+# Exporta datos APV + UF del último año a CSV
+cartolas report apv
+cartolas report apv --output mi_apv.csv
 ```
 
-## Contribuir
+## Variables de entorno
 
-Si deseas contribuir a este proyecto, por favor sigue los siguientes pasos:
+| Variable | Descripción | Requerida |
+|----------|-------------|-----------|
+| `BCCH_USER` | Email registrado en API Banco Central | Sí |
+| `BCCH_PASS` | Contraseña API Banco Central | Sí |
+| `CARTOLAS_LOG_LEVEL` | Nivel de logging (`DEBUG`, `INFO`, `WARNING`, `ERROR`). Default: `INFO` | No |
 
-1. Haz un fork del repositorio.
-2. Crea una nueva rama (`git checkout -b feature/nueva-funcionalidad`).
-3. Realiza tus cambios y haz commit (`git commit -am 'Agrega nueva funcionalidad'`).
-4. Sube tus cambios a tu fork (`git push origin feature/nueva-funcionalidad`).
-5. Abre un Pull Request.
+## Estructura del proyecto
 
-## Licencia
+```
+cartolas/       # Core: descarga, transformación, lectura y guardado de cartolas
+comparador/     # Análisis CLA mensual, merge con categorías El Mercurio
+eco/            # Integración con Banco Central (bcchapi)
+utiles/         # Decoradores (@retry, @timer), utilidades de fechas y archivos
+cli.py          # CLI unificado (entry point)
+```
 
-Este proyecto está bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
-
-## Contacto
-
-Para cualquier consulta o sugerencia, por favor contacta a [tu-email@dominio.com](mailto:tu-email@dominio.com).
+| Paquete | Qué hace |
+|---------|----------|
+| `cartolas` | Pipeline completo: scraping CMF con Playwright → transformación a Polars LazyFrame → guardado en Parquet |
+| `comparador` | Genera reportes CLA mensuales cruzando cartolas con datos BCCh y categorización El Mercurio |
+| `eco` | Descarga y actualiza series económicas del Banco Central (UF, dólar, euro, oro, TPM, UTM) |
+| `utiles` | Decoradores de retry/timer, funciones de fechas, manejo de archivos, configuración de logging |
