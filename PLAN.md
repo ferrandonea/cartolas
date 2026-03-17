@@ -50,7 +50,7 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 | E2 | **Reportes livianos**: Excel solo con hoja "Salida" (10KB/5seg vs 90MB/6min). Eliminadas hojas 1-9, `dfs_intermedios`, `excel_steps` (deprecated con warning) | Alto | 1 día | `comparador/cla_monthly.py`, callers | **DONE** |
 | E3 | **CLI unificado**: reemplazar 5 scripts raíz sueltos por un CLI con `click` o `typer` (`cartolas update`, `cartolas report cla`, etc.) | Medio | 1 día | Scripts raíz + nuevo `cli.py` | PENDIENTE |
 | E4 | **Logging**: reemplazar `print()` en decoradores y pipeline por `logging` con niveles configurables | Medio | 0.5 día | Todos los módulos | **DONE** |
-| E5 | **`__init__.py` con exports**: definir API pública de cada paquete para simplificar imports | Bajo | 2h | 4 `__init__.py` | PENDIENTE |
+| E5 | **`__init__.py` con exports**: definir API pública de cada paquete para simplificar imports | Bajo | 2h | 4 `__init__.py` | **DONE** |
 | E6 | **Resolver imports circulares**: eliminar el late-import de `file_tools` en `config.py` reestructurando dependencias | Medio | 3h | `file_tools.py`, `download.py`, `update.py` | **DONE** |
 
 ### Fixes fuera de roadmap
@@ -85,9 +85,12 @@ La lógica de update se consolidó en `update.py` con parámetro `by_year`. `upd
 
 `file_tools.py` tenía un late-import de `cartolas.config.CARTOLAS_FOLDER` a mitad de archivo para evitar un ciclo `utiles → cartolas.config`. La causa: `CARTOLAS_FOLDER` se usaba como valor default del parámetro `folder` en `clean_txt_folder()`. Se eliminó el default, haciendo `folder` obligatorio. Los 3 callers (`download.py`, `update.py`, y el bloque `__main__` de `file_tools.py`) ahora pasan `CARTOLAS_FOLDER` explícitamente.
 
-## Próxima sesión: E5 (`__init__.py` con exports)
+### E5: `__init__.py` con API pública (sin deps pesadas)
+
+Se definieron re-exports en `cartolas/`, `comparador/` y `utiles/`. Se excluyeron deliberadamente `update_parquet` y `update_parquet_by_year` de `cartolas/__init__.py` porque arrastran Playwright y el scraper al importar el paquete. `eco/__init__.py` se dejó vacío por la misma razón: `bcchapi` (y su dependencia transitiva de Pandas) queda encapsulado en `eco.bcentral` — quien lo necesite importa desde ahí directamente.
+
+## Próxima sesión: E3 (CLI unificado)
 
 ## Orden sugerido para pendientes
 
-1. **E5** — `__init__.py` con exports
-2. **E3** — CLI unificado
+1. **E3** — CLI unificado
