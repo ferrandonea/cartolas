@@ -27,11 +27,11 @@ BCCH_PASS=tu_password
 ## Uso
 
 ```bash
-# Actualización diaria: descarga CMF + actualiza BCCh
+# Actualización por año (default): descarga CMF + actualiza BCCh
 cartolas update
 
-# Actualización por año (datos históricos)
-cartolas update --by-year
+# Actualización monolítica (parquet único)
+cartolas update --all
 
 # Reporte CLA mensual (actualiza datos + genera Excel)
 cartolas report cla

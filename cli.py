@@ -12,19 +12,19 @@ def main():
 
 
 @main.command()
-@click.option("--by-year", is_flag=True, help="Actualizar datos por año (históricos).")
-def update(by_year):
+@click.option("--all", "monolithic", is_flag=True, help="Actualizar parquet monolítico en vez de por año.")
+def update(monolithic):
     """Descarga cartolas CMF y actualiza datos BCCh."""
     from eco.bcentral import update_bcch_parquet
 
-    if by_year:
-        from cartolas.update_by_year import update_parquet_by_year
-
-        update_parquet_by_year()
-    else:
+    if monolithic:
         from cartolas.update import update_parquet
 
         update_parquet()
+    else:
+        from cartolas.update_by_year import update_parquet_by_year
+
+        update_parquet_by_year()
 
     update_bcch_parquet()
 
@@ -65,6 +65,7 @@ def cla(output, no_update):
         output = Path(output)
 
     logger.info(f"Reporte CLA: {output}")
+    output.parent.mkdir(parents=True, exist_ok=True)
     generate_cla_data(save_xlsx=True, xlsx_name=output)
 
 
