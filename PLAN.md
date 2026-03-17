@@ -42,16 +42,16 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 | M6 | Email a `.env` en `config.py` | **DONE** |
 | M7 | Consolidar `update.py` y `update_by_year.py` | **DONE** |
 
-### Cambios estructurales — PENDIENTES
+### Cambios estructurales
 
-| # | Mejora | Impacto | Esfuerzo | Alcance |
-|---|--------|---------|----------|---------|
-| E1 | **Tests**: agregar tests unitarios para funciones puras (transform, fechas, polars_utils, merge) — el proyecto no tiene ninguno | Muy alto | 2-3 días | Nuevo directorio `tests/` |
-| E2 | **Reportes livianos**: reemplazar Excel de 94-341MB por Parquet + template Excel pequeño, o exportar solo los datos necesarios | Alto | 1 día | `comparador/cla_monthly.py` |
-| E3 | **CLI unificado**: reemplazar 5 scripts raíz sueltos por un CLI con `click` o `typer` (`cartolas update`, `cartolas report cla`, etc.) | Medio | 1 día | Scripts raíz + nuevo `cli.py` |
-| E4 | **Logging**: reemplazar `print()` en decoradores y pipeline por `logging` con niveles configurables | Medio | 0.5 día | Todos los módulos |
-| E5 | **`__init__.py` con exports**: definir API pública de cada paquete para simplificar imports | Bajo | 2h | 4 `__init__.py` |
-| E6 | **Resolver imports circulares**: eliminar el late-import de `file_tools` en `config.py` reestructurando dependencias | Medio | 3h | `config.py`, `file_tools.py` |
+| # | Mejora | Impacto | Esfuerzo | Alcance | Estado |
+|---|--------|---------|----------|---------|--------|
+| E1 | **Tests**: 63 tests unitarios para funciones puras (fechas, polars_utils, transform, merge) | Muy alto | 2-3 días | `tests/` (4 archivos) | **DONE** |
+| E2 | **Reportes livianos**: reemplazar Excel de 94-341MB por Parquet + template Excel pequeño, o exportar solo los datos necesarios | Alto | 1 día | `comparador/cla_monthly.py` | PENDIENTE |
+| E3 | **CLI unificado**: reemplazar 5 scripts raíz sueltos por un CLI con `click` o `typer` (`cartolas update`, `cartolas report cla`, etc.) | Medio | 1 día | Scripts raíz + nuevo `cli.py` | PENDIENTE |
+| E4 | **Logging**: reemplazar `print()` en decoradores y pipeline por `logging` con niveles configurables | Medio | 0.5 día | Todos los módulos | PENDIENTE |
+| E5 | **`__init__.py` con exports**: definir API pública de cada paquete para simplificar imports | Bajo | 2h | 4 `__init__.py` | PENDIENTE |
+| E6 | **Resolver imports circulares**: eliminar el late-import de `file_tools` en `config.py` reestructurando dependencias | Medio | 3h | `config.py`, `file_tools.py` | PENDIENTE |
 
 ---
 
