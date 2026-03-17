@@ -15,6 +15,7 @@ Las funciones principales incluyen:
 - generate_cla_data: Función principal que orquesta todo el proceso
 """
 
+import warnings
 from datetime import date
 
 import polars as pl
@@ -246,6 +247,7 @@ def generate_cla_data(
     relevant_columns: list[str] = RELEVANT_COLUMNS,
     save_xlsx: bool = False,
     xlsx_name: str = "cla_data.xlsx",
+    excel_steps: str | None = None,
     custom_mapping: dict[int, int] | None = None,
 ) -> pl.DataFrame:
     """
@@ -276,6 +278,14 @@ def generate_cla_data(
     Returns:
         pl.DataFrame: DataFrame procesado con todos los datos necesarios para el análisis CLA
     """
+    if excel_steps is not None:
+        warnings.warn(
+            "excel_steps está deprecated y no tiene efecto. "
+            "El Excel solo genera la hoja Salida.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     # Obtener las fechas relevantes para el análisis
     cla_dates = generate_cla_dates(input_date)
     # Invertir el diccionario para mapear fecha a nombre de período
