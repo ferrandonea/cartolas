@@ -1,11 +1,14 @@
 """Utilidades de manejo de archivos"""
 
 import json
+import logging
 import secrets
 from pathlib import Path
 from datetime import datetime
 from typing import Union, Any, Optional
 
+
+logger = logging.getLogger(__name__)
 
 HASH_LENGTH = 12
 # Tamaño mínimo de las cartolas
@@ -83,9 +86,9 @@ def clean_txt_folder(
         if file.stat().st_size < min_file_size or delete_all:
             file.unlink()
             if delete_all:
-                print(f"Archivo {file.stem} borrado")
+                logger.debug(f"Archivo {file.stem} borrado")
             else:
-                print(
+                logger.debug(
                     f"Archivo {file.stem} borrado porque es menor a {min_file_size / 1000:.2f} KB"
                 )
 
@@ -121,7 +124,7 @@ def obtener_archivo_mas_reciente(directorio: Path) -> Optional[Path]:
         return archivo_reciente
 
     except Exception as e:
-        print(f"Error al buscar archivo más reciente: {e}")
+        logger.error(f"Error al buscar archivo más reciente: {e}")
         return None
 
 
@@ -149,7 +152,7 @@ def obtener_fecha_creacion(archivo: Path) -> Optional[datetime]:
         return fecha_creacion
 
     except Exception as e:
-        print(f"Error al obtener fecha de creación de {archivo.name}: {e}")
+        logger.error(f"Error al obtener fecha de creación de {archivo.name}: {e}")
         return None
 
 
@@ -175,7 +178,7 @@ def leer_json(ruta_archivo: Union[str, Path]) -> Optional[dict[str, Any]]:
 
         # Verificar que el archivo existe
         if not ruta.exists():
-            print(f"El archivo {ruta} no existe")
+            logger.error(f"El archivo {ruta} no existe")
             return None
 
         # Leer el archivo JSON
@@ -185,10 +188,10 @@ def leer_json(ruta_archivo: Union[str, Path]) -> Optional[dict[str, Any]]:
         return datos
 
     except json.JSONDecodeError as e:
-        print(f"Error al decodificar JSON: {e}")
+        logger.error(f"Error al decodificar JSON: {e}")
         return None
     except Exception as e:
-        print(f"Error al leer archivo: {e}")
+        logger.error(f"Error al leer archivo: {e}")
         return None
 
 

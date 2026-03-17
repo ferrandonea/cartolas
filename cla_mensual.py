@@ -9,12 +9,16 @@ Este script automatiza el proceso de generación del reporte mensual de análisi
 El reporte se guarda en un archivo Excel con la fecha del último día del mes anterior.
 """
 
+import logging
 from comparador.cla_monthly import generate_cla_data
 from cartolas.update_by_year import update_parquet_by_year
 from eco.bcentral import update_bcch_parquet
 from datetime import date
 from utiles.fechas import ultimo_dia_mes_anterior
 from pathlib import Path
+from utiles.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 # Fecha del reporte: último día del mes anterior
 REPORT_DATE = ultimo_dia_mes_anterior(date.today())
@@ -35,18 +39,18 @@ def main():
     
     El reporte se guarda en un archivo Excel con la fecha del último día del mes anterior.
     """
-    print(CLA_EXCEL)
-    
+    logger.info(f"Reporte CLA: {CLA_EXCEL}")
+
     # Paso 1: Actualizar datos históricos de fondos mutuos
-    print("Actualizando parquet por año")
+    logger.info("Actualizando parquet por año")
     update_parquet_by_year()
-    
+
     # Paso 2: Actualizar datos del Banco Central
-    print("Actualizando bcch parquet")
+    logger.info("Actualizando bcch parquet")
     update_bcch_parquet()
-    
+
     # Paso 3: Generar reporte CLA mensual
-    print("Generando cla mensual")
+    logger.info("Generando cla mensual")
     generate_cla_data(
         save_xlsx=True,
         xlsx_name=CLA_EXCEL,
@@ -54,4 +58,5 @@ def main():
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()

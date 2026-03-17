@@ -1,8 +1,11 @@
 """Utilidades relacionadas con fechas"""
 
+import logging
 from datetime import date, datetime, timedelta
 from typing import Union
 from dateutil.relativedelta import relativedelta
+
+logger = logging.getLogger(__name__)
 
 
 def from_date_to_datetime(input_date: datetime | date) -> date:
@@ -141,7 +144,7 @@ def es_mismo_mes(fecha: Union[datetime, str]) -> bool:
         return fecha.year == hoy.year and fecha.month == hoy.month
 
     except Exception as e:
-        print(f"Error al comparar fechas: {e}")
+        logger.error(f"Error al comparar fechas: {e}")
         return False
 
 

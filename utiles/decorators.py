@@ -1,5 +1,6 @@
 """Decoradores"""
 
+import logging
 from typing import Callable, TypeVar
 import time
 from functools import wraps
@@ -7,6 +8,8 @@ from typing import Any
 
 # Tipo de dato genérico
 T = TypeVar("T")
+
+logger = logging.getLogger(__name__)
 
 
 def retry_function(
@@ -37,8 +40,8 @@ def retry_function(
             except Exception as e:
                 last_exception = e
                 attempts += 1
-                print(f"Error en {func.__name__}: {e}")
-                print(f"Intento {attempts}/{max_attempts}. Esperando {delay} segundos")
+                logger.warning(f"Error en {func.__name__}: {e}")
+                logger.warning(f"Intento {attempts}/{max_attempts}. Esperando {delay} segundos")
                 time.sleep(delay)
         raise last_exception
 
@@ -73,8 +76,8 @@ def exp_retry_function(
             except Exception as e:
                 last_exception = e
                 attempts += 1
-                print(f"Error en {func.__name__}: {e}")
-                print(
+                logger.warning(f"Error en {func.__name__}: {e}")
+                logger.warning(
                     f"Intento {attempts}/{max_attempts}. Esperando {pow(2, attempts)} segundos"
                 )
                 time.sleep(pow(2, attempts))
@@ -123,7 +126,7 @@ def timer(func: Callable[..., Any]) -> Callable[..., Any]:
         result = func(*args, **kwargs)
         end_time = time.time()
         execution_time = end_time - start_time
-        print(f"\nFunción {func.__name__} ejecutada en {execution_time:.4f} segundos")
+        logger.info(f"Función {func.__name__} ejecutada en {execution_time:.4f} segundos")
         return result
 
     return wrapper

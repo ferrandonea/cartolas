@@ -1,6 +1,10 @@
+import logging
+
 import polars as pl
 from pathlib import Path
 from utiles.decorators import timer
+
+logger = logging.getLogger(__name__)
 
 
 @timer
@@ -18,5 +22,4 @@ def save_lazyframe_to_parquet(
     lazy_df = lazy_df.unique() if unique else lazy_df
     # Colecta los datos y los guarda en un archivo Parquet
     lazy_df.collect().write_parquet(filename)
-    # Imprime un mensaje de éxito
-    print(f"Archivo parquet grabado con éxito en {filename}")
+    logger.info(f"Archivo parquet grabado con éxito en {filename}")

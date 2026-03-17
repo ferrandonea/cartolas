@@ -3,6 +3,7 @@ Este módulo se encarga de actualizar las cartolas de la CMF,
 ya sea en un archivo Parquet monolítico o en archivos separados por año.
 """
 
+import logging
 from datetime import date
 from pathlib import Path
 
@@ -16,6 +17,8 @@ from utiles.decorators import timer
 from utiles.file_tools import clean_txt_folder
 
 import polars as pl
+
+logger = logging.getLogger(__name__)
 
 
 def _get_dates_in_parquet(parquet_path: Path) -> list[date]:
@@ -33,9 +36,9 @@ def _get_dates_in_parquet(parquet_path: Path) -> list[date]:
 
 def _print_missing_ranges(missing_dates: list[date], label: str = ""):
     prefix = f" para {label}" if label else ""
-    print(f"\nFechas faltantes{prefix}: (rangos)")
+    logger.info(f"Fechas faltantes{prefix}: (rangos)")
     for i, fecha in enumerate(consecutive_date_ranges(missing_dates)):
-        print(i, ":", " -> ".join([x.strftime("%d/%m/%Y") for x in fecha]))
+        logger.info(f"{i}: {' -> '.join([x.strftime('%d/%m/%Y') for x in fecha])}")
 
 
 def get_year_parquet_path(year: int, base_dir: Path) -> Path:
@@ -88,11 +91,11 @@ def _update_single(parquet_file, min_date, max_date, sleep_time):
         download_cartolas_range(missing_dates, sleep_time)
         lazy_df_newdata = transform_cartola_folder(unique=True)
         df = pl.concat([lazy_parquet_df, lazy_df_newdata])
-        print("Grabando parquet")
+        logger.info("Grabando parquet")
         save_lazyframe_to_parquet(lazy_df=df, filename=parquet_file)
         clean_txt_folder(delete_all=True)
     else:
-        print("Archivo parquet actualizado, no hay cambios")
+        logger.info("Archivo parquet actualizado, no hay cambios")
 
 
 def _update_by_year(base_dir, min_date, max_date, sleep_time):
@@ -123,11 +126,11 @@ def _update_by_year(base_dir, min_date, max_date, sleep_time):
                 df = pl.concat([lazy_year_df, lazy_df_newdata])
             else:
                 df = lazy_df_newdata
-            print(f"Grabando parquet para el año {year}")
+            logger.info(f"Grabando parquet para el año {year}")
             save_lazyframe_to_parquet(lazy_df=df, filename=year_file)
         clean_txt_folder(delete_all=True)
     else:
-        print("Archivos parquet actualizados, no hay cambios")
+        logger.info("Archivos parquet actualizados, no hay cambios")
 
 
 if __name__ == "__main__":

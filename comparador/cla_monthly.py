@@ -15,6 +15,7 @@ Las funciones principales incluyen:
 - generate_cla_data: Función principal que orquesta todo el proceso
 """
 
+import logging
 import warnings
 from datetime import date
 
@@ -31,6 +32,8 @@ from utiles.fechas import (
 )
 from utiles.decorators import timer
 from utiles.polars_utils import add_cumulative_returns
+
+logger = logging.getLogger(__name__)
 
 # Constantes para los períodos de análisis
 MESES_CLA = [1, 3, 6]  # Períodos mensuales a analizar (1, 3 y 6 meses)
@@ -81,7 +84,7 @@ def generate_cla_dates(input_date: date = date.today()) -> dict[int, date]:
     """
     # Obtener el último día del mes anterior como fecha base del reporte
     current_report_date = ultimo_dia_mes_anterior(input_date)
-    print(f"{current_report_date = }")
+    logger.info(f"{current_report_date = }")
 
     # Construir el diccionario de fechas combinando:
     cla_dates = {

@@ -49,7 +49,7 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 | E1 | **Tests**: 67 tests unitarios (fechas, polars_utils, transform, merge, cla_monthly) | Muy alto | 2-3 días | `tests/` (5 archivos) | **DONE** |
 | E2 | **Reportes livianos**: Excel solo con hoja "Salida" (10KB/5seg vs 90MB/6min). Eliminadas hojas 1-9, `dfs_intermedios`, `excel_steps` (deprecated con warning) | Alto | 1 día | `comparador/cla_monthly.py`, callers | **DONE** |
 | E3 | **CLI unificado**: reemplazar 5 scripts raíz sueltos por un CLI con `click` o `typer` (`cartolas update`, `cartolas report cla`, etc.) | Medio | 1 día | Scripts raíz + nuevo `cli.py` | PENDIENTE |
-| E4 | **Logging**: reemplazar `print()` en decoradores y pipeline por `logging` con niveles configurables | Medio | 0.5 día | Todos los módulos | PENDIENTE |
+| E4 | **Logging**: reemplazar `print()` en decoradores y pipeline por `logging` con niveles configurables | Medio | 0.5 día | Todos los módulos | **DONE** |
 | E5 | **`__init__.py` con exports**: definir API pública de cada paquete para simplificar imports | Bajo | 2h | 4 `__init__.py` | PENDIENTE |
 | E6 | **Resolver imports circulares**: eliminar el late-import de `file_tools` en `config.py` reestructurando dependencias | Medio | 3h | `config.py`, `file_tools.py` | PENDIENTE |
 
@@ -77,11 +77,10 @@ La lógica de update se consolidó en `update.py` con parámetro `by_year`. `upd
 
 ---
 
-## Próxima sesión: E4 (Logging)
+## Próxima sesión: E6 (Resolver imports circulares)
 
 ## Orden sugerido para pendientes
 
-1. **E4** — Logging (ya parcialmente hecho en M2 y M3)
-2. **E6** — Resolver imports circulares
+1. **E6** — Resolver imports circulares
 3. **E5** — `__init__.py` con exports
 4. **E3** — CLI unificado

@@ -7,6 +7,7 @@ series temporales económicas.
 """
 
 # Importamos las bibliotecas necesarias
+import logging
 from dotenv import dotenv_values  # Para cargar variables de entorno
 import bcchapi  # API oficial del Banco Central de Chile
 from datetime import datetime, timedelta
@@ -15,6 +16,8 @@ import polars as pl  # Biblioteca para procesamiento de datos
 from cartolas.config import BCCH_FOLDER  # Configuración de carpetas
 import json
 from pathlib import Path  # Manejo de rutas de archivos
+
+logger = logging.getLogger(__name__)
 
 # Definimos la fecha hasta la cual queremos datos (ayer)
 LAST_DATE = datetime.now() - timedelta(days=1)
@@ -221,17 +224,17 @@ def update_bcch_parquet(path: str = PARQUET_PATH) -> pl.LazyFrame:
     except FileNotFoundError:
         # Si el archivo no existe, establece una fecha muy antigua para forzar la descarga
         last_date = datetime(1970, 1, 1).date()  # una fecha muy antigua
-        print("BCCH: No se encontró el archivo de datos del BCCh")
+        logger.warning("No se encontró el archivo de datos del BCCh")
 
     # Compara la fecha más reciente con la fecha hasta la cual queremos datos
     if last_date >= LAST_DATE.date() and df is not None:
         # Si ya tenemos datos actualizados, no hacemos nada
-        print("BCCH: No hay datos nuevos del BCCh")
+        logger.info("No hay datos nuevos del BCCh")
         return df
     else:
         # Si necesitamos datos más recientes, descargamos y guardamos
-        print(f"BCCH: Última fecha en el archivo: {last_date}")
-        print("BCCH: Actualizando datos del BCCh")
+        logger.info(f"Última fecha en el archivo: {last_date}")
+        logger.info("Actualizando datos del BCCh")
         df = baja_bcch_as_polars(as_lazy=True)
         df.collect().write_parquet(path)
     return df

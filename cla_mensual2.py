@@ -13,12 +13,16 @@ Diferencias con cla_mensual.py:
 El reporte se guarda en un archivo Excel con la fecha del último día del mes anterior.
 """
 
+import logging
 from comparador.cla_monthly import generate_cla_data
 from cartolas.update_by_year import update_parquet_by_year
 from eco.bcentral import update_bcch_parquet
 from datetime import date
 from utiles.fechas import ultimo_dia_mes_anterior
 from pathlib import Path
+from utiles.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 # Fecha del reporte: último día del mes anterior
 REPORT_DATE = ultimo_dia_mes_anterior(date.today())
@@ -51,21 +55,21 @@ def main():
     El reporte se guarda en un archivo Excel con la fecha del último día del mes anterior.
     """
     CLA_FOLDER.mkdir(exist_ok=True)
-    print(f"📄 Generando reporte personalizado en: {CLA_EXCEL}")
-    print(f"🔄 Mapping personalizado:")
+    logger.info(f"Generando reporte personalizado en: {CLA_EXCEL}")
+    logger.info("Mapping personalizado:")
     for run, categoria in CUSTOM_CATEGORY_MAPPING.items():
-        print(f"   - RUN {run} → Categoría {categoria}")
+        logger.info(f"  RUN {run} -> Categoría {categoria}")
 
     # Paso 1: Actualizar datos históricos de fondos mutuos
-    print("\n📥 Paso 1/3: Actualizando datos de fondos mutuos...")
+    logger.info("Paso 1/3: Actualizando datos de fondos mutuos")
     update_parquet_by_year()
 
     # Paso 2: Actualizar datos del Banco Central
-    print("📥 Paso 2/3: Actualizando datos del Banco Central...")
+    logger.info("Paso 2/3: Actualizando datos del Banco Central")
     update_bcch_parquet()
 
     # Paso 3: Generar reporte CLA mensual con categorías personalizadas
-    print("📊 Paso 3/3: Generando reporte CLA con categorías personalizadas...")
+    logger.info("Paso 3/3: Generando reporte CLA con categorías personalizadas")
 
     generate_cla_data(
         custom_mapping=CUSTOM_CATEGORY_MAPPING,
@@ -73,11 +77,12 @@ def main():
         xlsx_name=str(CLA_EXCEL),
     )
 
-    print(f"\n✅ Reporte generado exitosamente: {CLA_EXCEL}")
-    print(f"✅ Mapeo personalizado aplicado correctamente:")
+    logger.info(f"Reporte generado exitosamente: {CLA_EXCEL}")
+    logger.info("Mapeo personalizado aplicado correctamente:")
     for run, categoria in CUSTOM_CATEGORY_MAPPING.items():
-        print(f"   - RUN {run} comparado con fondos de categoría {categoria}")
+        logger.info(f"  RUN {run} comparado con fondos de categoría {categoria}")
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()

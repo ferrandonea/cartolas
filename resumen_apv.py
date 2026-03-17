@@ -1,13 +1,17 @@
+import logging
 from cartolas.read import read_parquet_cartolas_lazy
 from cartolas.config import PARQUET_FOLDER_YEAR
 import polars as pl
 from eco.bcentral import PARQUET_PATH as BCCH_PARQUET
 from utiles.fechas import date_n_years_ago
+from utiles.logging_config import setup_logging
 
-print(BCCH_PARQUET)
+logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
+    setup_logging()
+    logger.info(f"Ruta BCCh parquet: {BCCH_PARQUET}")
     df = read_parquet_cartolas_lazy(
         parquet_path=PARQUET_FOLDER_YEAR
     ).filter(pl.col("RUN_FM").is_in([9809, 9810, 9811])).select(
