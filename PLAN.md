@@ -63,7 +63,7 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 | # | Mejora | Impacto | Esfuerzo | Archivos |
 |---|--------|---------|----------|----------|
 | M1 | ~~**Lazy-load de BCCh**~~ **DONE**: credenciales, cliente y tickers con `lru_cache`, login solo al primer uso | Alto | 1h | `eco/bcentral.py` |
-| M2 | **Manejo de errores en Elmer**: retry con backoff, logging en vez de `None` silencioso | Alto | 1.5h | `comparador/elmer.py` |
+| M2 | ~~**Manejo de errores en Elmer**~~ **DONE**: retry con backoff exponencial, timeout, logging, reporte de categorías fallidas | Alto | 1.5h | `comparador/elmer.py` |
 | M3 | **Validación en `download.py`**: chequear tamaño de archivo descargado, loggear captchas fallidos, eliminar retry redundante | Alto | 2h | `cartolas/download.py` |
 | M4 | **Eliminar mezcla Pandas/NumPy**: reescribir `bcentral.py` para retornar Polars directo, reemplazar numpy en `tablas.py` con expresiones Polars nativas | Medio | 2h | `eco/bcentral.py`, `comparador/tablas.py` |
 | M5 | **Parametrizar fechas hardcodeadas**: mover filtros de 2024 a `config.py` o calcularlos dinámicamente | Medio | 1h | `tablas.py`, `resumen_apv.py` |
