@@ -68,7 +68,7 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 | M4 | **Eliminar mezcla Pandas/NumPy** — **DESCARTADO**: `bcentral.py` no tocable (Pandas viene de bcchapi), `tablas.py` sin cambios (NumPy correcto para semántica NaN en estadísticas por fila) | Medio | — | — |
 | M5 | ~~**Parametrizar fechas hardcodeadas**~~ **DONE**: fechas dinámicas con funciones de `utiles/fechas.py` | Medio | 1h | `tablas.py`, `resumen_apv.py` |
 | M6 | ~~**Email a `.env`**~~ **DONE**: config.py lee SENDER_MAIL, SENDER_NAME, TO_EMAILS desde `.env` con fallback | Bajo | 30 min | `cartolas/config.py` |
-| M7 | **Consolidar `update.py` y `update_by_year.py`**: 80% de lógica duplicada, refactorizar a una función parametrizada | Medio | 2h | `cartolas/update.py`, `cartolas/update_by_year.py` |
+| M7 | ~~**Consolidar `update.py` y `update_by_year.py`**~~ **DONE**: lógica unificada en `update.py` con `by_year` param, `update_by_year.py` es wrapper delgado | Medio | 2h | `cartolas/update.py`, `cartolas/update_by_year.py` |
 
 ---
 
