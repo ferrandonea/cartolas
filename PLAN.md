@@ -47,7 +47,7 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 | # | Mejora | Impacto | Esfuerzo | Alcance | Estado |
 |---|--------|---------|----------|---------|--------|
 | E1 | **Tests**: 63 tests unitarios para funciones puras (fechas, polars_utils, transform, merge) | Muy alto | 2-3 días | `tests/` (4 archivos) | **DONE** |
-| E2 | **Reportes livianos**: reemplazar Excel de 94-341MB por Parquet + template Excel pequeño, o exportar solo los datos necesarios | Alto | 1 día | `comparador/cla_monthly.py` | PENDIENTE |
+| E2 | **Reportes livianos**: Excel solo con hoja "Salida" (10KB, 5seg) — eliminadas hojas intermedias 1-9 y lógica `dfs_intermedios`/`excel_steps` | Alto | 1 día | `comparador/cla_monthly.py` | **DONE** |
 | E3 | **CLI unificado**: reemplazar 5 scripts raíz sueltos por un CLI con `click` o `typer` (`cartolas update`, `cartolas report cla`, etc.) | Medio | 1 día | Scripts raíz + nuevo `cli.py` | PENDIENTE |
 | E4 | **Logging**: reemplazar `print()` en decoradores y pipeline por `logging` con niveles configurables | Medio | 0.5 día | Todos los módulos | PENDIENTE |
 | E5 | **`__init__.py` con exports**: definir API pública de cada paquete para simplificar imports | Bajo | 2h | 4 `__init__.py` | PENDIENTE |

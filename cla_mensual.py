@@ -48,9 +48,8 @@ def main():
     # Paso 3: Generar reporte CLA mensual
     print("Generando cla mensual")
     generate_cla_data(
-        save_xlsx=True,  # Guardar resultados en Excel
-        xlsx_name=CLA_EXCEL,  # Nombre del archivo Excel
-        excel_steps="minimal"  # Guardar solo los pasos más relevantes
+        save_xlsx=True,
+        xlsx_name=CLA_EXCEL,
     )
 
 

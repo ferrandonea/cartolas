@@ -16,7 +16,6 @@ Las funciones principales incluyen:
 """
 
 from datetime import date
-from typing import Literal
 
 import polars as pl
 import pandas as pd
@@ -56,21 +55,6 @@ RELEVANT_COLUMNS = [
     "RUN_SOYFOCUS",  # Identificador del fondo SoyFocus correspondiente
     "SERIE_SOYFOCUS",  # Serie del fondo SoyFocus correspondiente
 ]
-
-# Nombres de las hojas para el archivo Excel
-EXCEL_SHEETS = {
-    "datos_base": "1 Base",  # Datos base sin procesar
-    "rentabilidades": "2 Acumuladas",  # Rentabilidades acumuladas
-    "categorias": "3 Categoría",  # Datos filtrados por categoría
-    "columnas": "4 Seleccionadas",  # Columnas seleccionadas
-    "fechas": "5 Fecha",  # Datos filtrados por fechas relevantes
-    "rentabilidad_periodo": "6 Rentabilidad Período",  # Rentabilidades por período
-    "final": "7 SoyFocus",  # Datos finales con comparación SoyFocus
-    "estadisticas": "8 Estadísticas",  # Estadísticas resumidas
-}
-
-# Opciones para guardar pasos intermedios en Excel
-EXCEL_STEPS = Literal["all", "minimal", "none"]
 
 
 @timer
@@ -262,7 +246,6 @@ def generate_cla_data(
     relevant_columns: list[str] = RELEVANT_COLUMNS,
     save_xlsx: bool = False,
     xlsx_name: str = "cla_data.xlsx",
-    excel_steps: EXCEL_STEPS = "minimal",
     custom_mapping: dict[int, int] | None = None,
 ) -> pl.DataFrame:
     """
@@ -285,15 +268,10 @@ def generate_cla_data(
             Por defecto usa CATEGORIAS_ELMER.
         relevant_columns (list[str]): Lista de columnas a mantener en el resultado.
             Por defecto usa RELEVANT_COLUMNS.
-        save_xlsx (bool): Si es True, guarda los pasos intermedios en un archivo Excel.
+        save_xlsx (bool): Si es True, guarda el reporte en un archivo Excel.
             Por defecto es False.
         xlsx_name (str): Nombre del archivo Excel donde se guardarán los datos.
             Por defecto es "cla_data.xlsx".
-        excel_steps (Literal["all", "minimal", "none"]): Controla qué pasos se guardan en Excel:
-            - "all": guarda todos los pasos intermedios
-            - "minimal": guarda solo los pasos más relevantes (categorías, fechas, período y final)
-            - "none": no guarda ningún paso intermedio
-            Por defecto es "minimal".
 
     Returns:
         pl.DataFrame: DataFrame procesado con todos los datos necesarios para el análisis CLA
@@ -313,9 +291,6 @@ def generate_cla_data(
         -1: "YTD",  # Año hasta la fecha
         0: "YTD",  # Año hasta la fecha
     }
-
-    # Diccionario para almacenar los DataFrames intermedios
-    dfs_intermedios = {}
 
     # Paso 1: Obtener datos base y agregar categorías
     df_base: pl.LazyFrame = merge_cartolas_with_categories(custom_mapping=custom_mapping)
@@ -359,40 +334,25 @@ def generate_cla_data(
             for run_fm, (cat, display) in SOYFOCUS_DEFAULTS.items()
         ]
 
-    if save_xlsx and excel_steps == "all":
-        dfs_intermedios[EXCEL_SHEETS["datos_base"]] = df_base.collect()
-
     # Paso 2: Calcular rentabilidades acumuladas
     df_rent: pl.LazyFrame = add_cumulative_returns(df_base)
-    if save_xlsx and excel_steps == "all":
-        dfs_intermedios[EXCEL_SHEETS["rentabilidades"]] = df_rent.collect()
 
     # Paso 3: Filtrar por categorías relevantes
     df_cat: pl.LazyFrame = df_rent.filter(pl.col("CATEGORIA").is_in(categories))
-    if save_xlsx and excel_steps in ["all", "minimal"]:
-        dfs_intermedios[EXCEL_SHEETS["categorias"]] = df_cat.collect()
 
     # Paso 4: Seleccionar columnas relevantes y convertir a DataFrame
     df_cols: pl.DataFrame = df_cat.collect().select(relevant_columns)
-    if save_xlsx and excel_steps == "all":
-        dfs_intermedios[EXCEL_SHEETS["columnas"]] = df_cols
 
     # Paso 5: Filtrar por fechas relevantes
     df_fechas: pl.DataFrame = df_cols.filter(
         pl.col("FECHA_INF").is_in(list(cla_dates.values()))
     )
-    if save_xlsx and excel_steps in ["all", "minimal"]:
-        dfs_intermedios[EXCEL_SHEETS["fechas"]] = df_fechas
 
     # Paso 6: Calcular rentabilidades del período
     df_periodo: pl.DataFrame = add_period_returns(df_fechas, cla_dates)
-    if save_xlsx and excel_steps in ["all", "minimal"]:
-        dfs_intermedios[EXCEL_SHEETS["rentabilidad_periodo"]] = df_periodo
 
     # Paso 7: Agregar rentabilidad de SoyFocus
     df_final: pl.DataFrame = add_soyfocus_returns(df_periodo)
-    if save_xlsx and excel_steps in ["all", "minimal"]:
-        dfs_intermedios[EXCEL_SHEETS["final"]] = df_final
 
     # Paso 8: Calcular estadísticas por categoría y fecha
     df_with_stats, df_stats = add_category_statistics(df_final)
@@ -407,31 +367,9 @@ def generate_cla_data(
             .alias("PERIODO")
         ]
     )
-    if save_xlsx and excel_steps in ["all", "minimal"]:
-        dfs_intermedios[EXCEL_SHEETS["estadisticas"]] = df_stats
-
-    # Paso 9: Crear tabla resumen y agregarla al Excel
-    if save_xlsx and excel_steps in ["all", "minimal"]:
-        dfs_intermedios["9 Resumen"] = df_stats.to_pandas()
-
-    # Guardar todos los DataFrames en el Excel si se solicitó
-    if save_xlsx and dfs_intermedios:
-        dfs_pandas = {}
-        for sheet_name, df in dfs_intermedios.items():
-            if isinstance(df, pl.DataFrame):
-                dfs_pandas[sheet_name] = df.to_pandas()
-            else:
-                dfs_pandas[sheet_name] = df
+    # Guardar reporte en Excel
+    if save_xlsx:
         with pd.ExcelWriter(xlsx_name, engine="xlsxwriter") as writer:
-            for sheet_name, df in dfs_pandas.items():
-                df.to_excel(writer, sheet_name=sheet_name, index=True)
-                worksheet = writer.sheets[sheet_name]
-                for idx, col in enumerate(df.columns):
-                    max_length = max(
-                        df[col].astype(str).apply(len).max(), len(str(col))
-                    )
-                    worksheet.set_column(idx, idx, max_length * 1.2)
-            # Crear hoja 10 Salida con formato visual
             write_hoja_10_salida(writer, df_stats, categorias=excel_categorias)
 
     return df_with_stats
@@ -620,5 +558,4 @@ if __name__ == "__main__":
     df = generate_cla_data(
         save_xlsx=True,
         xlsx_name="cla_data.xlsx",
-        excel_steps="minimal",  # Solo guardar los pasos más relevantes
     )

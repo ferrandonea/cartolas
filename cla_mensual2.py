@@ -71,7 +71,6 @@ def main():
         custom_mapping=CUSTOM_CATEGORY_MAPPING,
         save_xlsx=True,
         xlsx_name=str(CLA_EXCEL),
-        excel_steps="minimal",
     )
 
     print(f"\n✅ Reporte generado exitosamente: {CLA_EXCEL}")
