@@ -46,12 +46,18 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 
 | # | Mejora | Impacto | Esfuerzo | Alcance | Estado |
 |---|--------|---------|----------|---------|--------|
-| E1 | **Tests**: 63 tests unitarios para funciones puras (fechas, polars_utils, transform, merge) | Muy alto | 2-3 días | `tests/` (4 archivos) | **DONE** |
-| E2 | **Reportes livianos**: Excel solo con hoja "Salida" (10KB, 5seg) — eliminadas hojas intermedias 1-9 y lógica `dfs_intermedios`/`excel_steps` | Alto | 1 día | `comparador/cla_monthly.py` | **DONE** |
+| E1 | **Tests**: 67 tests unitarios (fechas, polars_utils, transform, merge, cla_monthly) | Muy alto | 2-3 días | `tests/` (5 archivos) | **DONE** |
+| E2 | **Reportes livianos**: Excel solo con hoja "Salida" (10KB/5seg vs 90MB/6min). Eliminadas hojas 1-9, `dfs_intermedios`, `excel_steps` (deprecated con warning) | Alto | 1 día | `comparador/cla_monthly.py`, callers | **DONE** |
 | E3 | **CLI unificado**: reemplazar 5 scripts raíz sueltos por un CLI con `click` o `typer` (`cartolas update`, `cartolas report cla`, etc.) | Medio | 1 día | Scripts raíz + nuevo `cli.py` | PENDIENTE |
 | E4 | **Logging**: reemplazar `print()` en decoradores y pipeline por `logging` con niveles configurables | Medio | 0.5 día | Todos los módulos | PENDIENTE |
 | E5 | **`__init__.py` con exports**: definir API pública de cada paquete para simplificar imports | Bajo | 2h | 4 `__init__.py` | PENDIENTE |
 | E6 | **Resolver imports circulares**: eliminar el late-import de `file_tools` en `config.py` reestructurando dependencias | Medio | 3h | `config.py`, `file_tools.py` | PENDIENTE |
+
+### Fixes fuera de roadmap
+
+| Fix | Descripción | Estado |
+|-----|-------------|--------|
+| F1 | **Creación automática de directorios del scraper**: `temp/`, `errors/`, `correct/`, `txt/` no se creaban antes de usarse en `download.py`, causando fallos en máquinas nuevas | **DONE** |
 
 ---
 
@@ -71,11 +77,9 @@ La lógica de update se consolidó en `update.py` con parámetro `by_year`. `upd
 
 ---
 
-## Orden sugerido para E1-E6
+## Orden sugerido para pendientes
 
-1. **E1** — Tests antes de hacer cambios estructurales mayores
-2. **E4** — Logging (ya parcialmente hecho en M2 y M3)
-3. **E6** — Resolver imports circulares
-4. **E5** — `__init__.py` con exports
-5. **E3** — CLI unificado
-6. **E2** — Reportes livianos (requiere validación de negocio)
+1. **E4** — Logging (ya parcialmente hecho en M2 y M3)
+2. **E6** — Resolver imports circulares
+3. **E5** — `__init__.py` con exports
+4. **E3** — CLI unificado
