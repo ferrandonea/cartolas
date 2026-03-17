@@ -176,7 +176,7 @@ def download_cartolas_range(input_date_range: list[date], sleep_time: int = 1):
         sleep(sleep_time)
 
     # Limpia archivos txt que son más chicos que el mínimo definido en kb
-    clean_txt_folder()
+    clean_txt_folder(folder=CARTOLAS_FOLDER)
 
 
 def main():

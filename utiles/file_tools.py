@@ -42,13 +42,8 @@ def generate_hash_image_name(length=HASH_LENGTH) -> str:
     return generate_hash_name(length=length) + ".png"
 
 
-# Este import debe estar acá sino hay un error de importación circular
-# El comentario de noqa es para que no huevee con el orden de los imports ruff
-from cartolas.config import CARTOLAS_FOLDER  # noqa: E402
-
-
 def clean_txt_folder(
-    folder: str | Path = CARTOLAS_FOLDER,
+    folder: str | Path,
     wildcard: str = WILDCARD_CARTOLAS_TXT,
     delete_all: bool = False,
     min_file_size: int = MIN_FILE_SIZE,
@@ -196,12 +191,14 @@ def leer_json(ruta_archivo: Union[str, Path]) -> Optional[dict[str, Any]]:
 
 
 if __name__ == "__main__":
+    from cartolas.config import CARTOLAS_FOLDER
+
     # Genera un nombre de archivo hash de 10 caracteres
     file_name = generate_hash_name() + ".png"
 
     print(file_name)
     print(generate_hash_image_name())
-    clean_txt_folder()
+    clean_txt_folder(folder=CARTOLAS_FOLDER)
     print(CARTOLAS_FOLDER)
     for archivo in CARTOLAS_FOLDER.glob(WILDCARD_CARTOLAS_TXT):
         print(archivo.stat().st_size)

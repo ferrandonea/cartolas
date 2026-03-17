@@ -7,7 +7,7 @@ import logging
 from datetime import date
 from pathlib import Path
 
-from cartolas.config import FECHA_MINIMA, PARQUET_FILE_PATH, PARQUET_FOLDER_YEAR, SCHEMA, get_fecha_maxima, FECHA_MAXIMA
+from cartolas.config import CARTOLAS_FOLDER, FECHA_MINIMA, PARQUET_FILE_PATH, PARQUET_FOLDER_YEAR, SCHEMA, get_fecha_maxima, FECHA_MAXIMA
 from cartolas.download import download_cartolas_range
 from cartolas.read import read_parquet_cartolas_lazy
 from cartolas.save import save_lazyframe_to_parquet
@@ -93,7 +93,7 @@ def _update_single(parquet_file, min_date, max_date, sleep_time):
         df = pl.concat([lazy_parquet_df, lazy_df_newdata])
         logger.info("Grabando parquet")
         save_lazyframe_to_parquet(lazy_df=df, filename=parquet_file)
-        clean_txt_folder(delete_all=True)
+        clean_txt_folder(folder=CARTOLAS_FOLDER, delete_all=True)
     else:
         logger.info("Archivo parquet actualizado, no hay cambios")
 
@@ -128,7 +128,7 @@ def _update_by_year(base_dir, min_date, max_date, sleep_time):
                 df = lazy_df_newdata
             logger.info(f"Grabando parquet para el año {year}")
             save_lazyframe_to_parquet(lazy_df=df, filename=year_file)
-        clean_txt_folder(delete_all=True)
+        clean_txt_folder(folder=CARTOLAS_FOLDER, delete_all=True)
     else:
         logger.info("Archivos parquet actualizados, no hay cambios")
 
