@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.6.0
+### Agregado
+- **CLI unificado con Click** (E3): nuevo `cli.py` con entry point `cartolas` registrado en `pyproject.toml`
+  - `cartolas update` — actualización por año (default) + BCCh
+  - `cartolas update --all` — actualización monolítica + BCCh
+  - `cartolas report cla [--output] [--no-update]` — reporte CLA mensual
+  - `cartolas report soyfocus` — genera parquets SoyFocus + TAC
+  - `cartolas report apv [--output]` — exporta CSV APV + UF
+- **67 tests unitarios** (E1): fechas, polars_utils, transform, merge, cla_monthly
+- **Logging centralizado** (E4): `setup_logging()` con nivel configurable vía `CARTOLAS_LOG_LEVEL`, 36 prints migrados a logging
+- **API pública por paquete** (E5): `__init__.py` con re-exports en `cartolas/`, `comparador/` y `utiles/`
+- Build system con hatchling para registrar entry points via `uv`
+- Validación de credenciales BCCh: error claro si `BCCH_USER` o `BCCH_PASS` faltan o están vacíos
+- Creación automática de directorios del scraper (`temp/`, `errors/`, `correct/`, `txt/`) (F1)
+- `apv.csv` y `uf.csv` agregados a `.gitignore`
+
+### Cambiado
+- **Reportes livianos** (E2): Excel CLA solo con hoja "Salida" (10KB/5seg vs 90MB/6min). `excel_steps` deprecated con warning
+- **Import circular eliminado** (E6): `file_tools.py` ya no hace late-import de `config.CARTOLAS_FOLDER`
+- **Retry con backoff en Elmer** (M2): reemplaza retry simple por backoff exponencial con logging
+- **Validación de descarga CMF** (M3): retry simplificado en `download.py`
+- **Lazy-load BCCh** (M1): `lru_cache` en cliente y credenciales
+- **Update consolidado** (M7): `update.py` con parámetro `by_year`, `update_by_year.py` como wrapper
+- **Fechas parametrizadas** (M5): eliminadas fechas hardcodeadas en `tablas.py` y `resumen_apv.py`
+- **Email a `.env`** (M6): credenciales de email movidas de `config.py` a `.env`
+- README reescrito: instalación, comandos con ejemplos, variables de entorno, estructura del proyecto
+
+### Eliminado
+- Scripts raíz reemplazados por CLI: `actualiza_parquet.py`, `actualiza_parquet_year.py`, `cla_mensual.py`, `soyfocus.py`, `resumen_apv.py`
+- Código muerto: `economy.py`, `cla_mensual copy.py`, `cla_monthly_new_conservador.py`, `datostablacla_new.xlsx` (Q1-Q3)
+- `listas.py` absorbido en `merge.py` (Q7)
+- Debug code en `fund_identifica.py` y `tablas.py` (Q5)
+
+### Corregido
+- Firma `-> str` a `-> pl.DataFrame` en `fund_identifica.py` (Q6)
+- `add_cumulative_returns()` movido a `utiles/polars_utils.py` (Q4)
+- `filter_pivot_by_selected_dates` retorna `dict[str, pl.DataFrame]` para preservar períodos duplicados en enero
+
+### Dependencias
+- Agregada `click>=8.1.0`
+- Agregada `hatchling` como build backend
+
 ## 0.5.0
 ### Cambiado
 - Migración de captchapass (TensorFlow ~600MB) a ONNX Runtime (~70MB)
