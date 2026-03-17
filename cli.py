@@ -14,7 +14,17 @@ def main():
 @main.command()
 @click.option("--all", "monolithic", is_flag=True, help="Actualizar parquet monolítico en vez de por año.")
 def update(monolithic):
-    """Descarga cartolas CMF y actualiza datos BCCh."""
+    """Descarga cartolas CMF y actualiza datos BCCh.
+
+    Por defecto actualiza parquets por año (un archivo por año).
+    Con --all genera un parquet monolítico. Ambos modos actualizan
+    también los datos del Banco Central.
+
+    \b
+    Ejemplos:
+      cartolas update          # actualización diaria por año
+      cartolas update --all    # parquet monolítico
+    """
     from eco.bcentral import update_bcch_parquet
 
     if monolithic:
@@ -31,7 +41,14 @@ def update(monolithic):
 
 @main.group()
 def report():
-    """Genera reportes de análisis."""
+    """Genera reportes de análisis.
+
+    \b
+    Reportes disponibles:
+      cla        Reporte CLA mensual (Excel)
+      soyfocus   Parquets SoyFocus con TAC y detalle por RUN
+      apv        CSV con datos APV y UF del último año
+    """
 
 
 @report.command()
@@ -41,6 +58,13 @@ def cla(output, no_update):
     """Genera reporte CLA mensual (Excel).
 
     Por defecto actualiza datos (by-year + BCCh) antes de generar.
+    El archivo se guarda en cla_mensual/cla_YYYYMMDD.xlsx.
+
+    \b
+    Ejemplos:
+      cartolas report cla                       # actualiza + genera
+      cartolas report cla --no-update           # solo genera
+      cartolas report cla --output marzo.xlsx   # ruta personalizada
     """
     from datetime import date
     from pathlib import Path
@@ -71,7 +95,16 @@ def cla(output, no_update):
 
 @report.command()
 def soyfocus():
-    """Genera parquets SoyFocus (detalle, por RUN y TAC)."""
+    """Genera parquets SoyFocus (detalle, por RUN y TAC).
+
+    Procesa los fondos SoyFocus (Moderado 9809, Conservador 9810,
+    Arriesgado 9811) y genera tres parquets: detalle por serie,
+    agregado por RUN, y reportes TAC para ambos niveles.
+
+    \b
+    Ejemplo:
+      cartolas report soyfocus
+    """
     from cartolas.soyfocus import (
         create_soyfocus_parquet,
         create_tac_report,
@@ -87,7 +120,16 @@ def soyfocus():
 @report.command()
 @click.option("--output", type=click.Path(), default="apv.csv", help="Ruta del CSV de salida.")
 def apv(output):
-    """Exporta datos APV de fondos SoyFocus a CSV."""
+    """Exporta datos APV de fondos SoyFocus a CSV.
+
+    Filtra series APV y APV-FREE del último año y exporta a CSV.
+    También genera uf.csv con valores UF del mismo período.
+
+    \b
+    Ejemplos:
+      cartolas report apv                    # genera apv.csv y uf.csv
+      cartolas report apv --output mi.csv    # ruta personalizada para APV
+    """
     import polars as pl
 
     from cartolas.config import PARQUET_FOLDER_YEAR
