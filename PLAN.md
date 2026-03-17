@@ -14,65 +14,35 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 4. **`comparador/merge.py`** — Join entre cartolas, BCCh y categorías Elmer; si falla, todo el análisis cae
 5. **`cartolas/soyfocus.py`** (429 líneas) — Cálculos financieros (TAC, TDC, rentabilidades)
 
-### Fragilidades
-
-- **`download.py`**: No valida que el archivo descargado tenga contenido real (`"ACA FALTA CHEQUEAR EL TAMAÑO"`). Retry doble (exponencial + fijo) apilado, potencialmente redundante.
-- **`eco/bcentral.py`**: Inicializa conexión a BCCh **al importar el módulo**. Si falta `.env` o la API está caída, el import crashea y arrastra todo lo que dependa de `eco`.
-- **`comparador/elmer.py`**: Errores de la API se tragan silenciosamente (retorna `None`). `MAX_NUMBER_OF_CATEGORIES=30` sin documentar.
-- **`fund_identifica.py`**: Función `cmf_to_pl()` nunca usada, ~60 líneas de debug comentado, firma `-> str` que retorna `DataFrame`.
-
-### Inconsistencias
-
-**Duplicación de código (problema más grave):**
-- `add_cumulative_returns()` copiada en 3 archivos: `cla_monthly.py`, `cla_monthly_new_conservador.py`, `tablas.py`
-- `cla_monthly_new_conservador.py` es copy-paste del 95% de `cla_monthly.py`
-
-**Mezcla de paradigmas de datos:**
-- Pipeline dice "Polars LazyFrames everywhere", pero `bcentral.py` retorna Pandas y convierte. `tablas.py` usa NumPy. `cla_monthly.py` alterna LazyFrame/DataFrame/Pandas en la misma función.
-
-**Error handling inconsistente:**
-- `file_tools.py` y `elmer.py`: defensivo, con try/except y fallbacks
-- `merge.py`, `cla_monthly.py`, `soyfocus.py`: cero validación, asumen datos perfectos
-- `decorators.py`: captura **todas** las excepciones — puede ocultar bugs
-
-**Otros:**
-- `__init__.py` vacíos en todos los paquetes
-- `listas.py` tiene 1 función de 3 líneas
-- Archivos borrados en git pero presentes: `cla_monthly_new_conservador.py`, `cla_new.py`
-- Reportes Excel de 94-341MB (Parquet + template sería más eficiente)
-- Fechas hardcodeadas de 2024 en `tablas.py` y `resumen_apv.py`
-
 ---
 
-## Quick Wins (< 1 hora cada uno)
+## Estado actual
 
-| # | Mejora | Impacto | Esfuerzo | Archivos |
-|---|--------|---------|----------|----------|
-| Q1 | ~~Eliminar `economy.py`~~ **DONE** | Bajo | 5 min | `cartolas/economy.py` |
-| Q2 | ~~Eliminar archivos huérfanos~~ **DONE**: se eliminó `cla_mensual copy.py` y `cla_mensual/datostablacla_new.xlsx`. `cla_monthly_custom.py` y `cla_new.py` ya no existían. | Bajo | 5 min | raíz + `cla_mensual/` |
-| Q3 | ~~Borrar `cla_monthly_new_conservador.py`~~ **DONE** | Medio | 15 min | `comparador/` |
-| Q4 | ~~Mover `add_cumulative_returns()` a `utiles/polars_utils.py`~~ **DONE** | Medio | 20 min | `cla_monthly.py`, `tablas.py` |
-| Q5 | ~~Limpiar código de debug~~ **DONE**: eliminada `cmf_to_pl()` muerta y `__main__` de `fund_identifica.py` y `tablas.py` | Bajo | 15 min | 2 archivos |
-| Q6 | ~~Corregir firma `-> str` a `-> pl.DataFrame`~~ **DONE** | Bajo | 5 min | `fund_identifica.py` |
-| Q7 | ~~Absorber `listas.py` en `merge.py`~~ **DONE**: inlined con `reduce(mul, ...)`, eliminado `utiles/listas.py` | Bajo | 10 min | `comparador/merge.py` |
+### Quick Wins — COMPLETADOS
 
----
+| # | Mejora | Estado |
+|---|--------|--------|
+| Q1 | Eliminar `economy.py` (código muerto) | **DONE** |
+| Q2 | Eliminar archivos huérfanos (`cla_mensual copy.py`, `datostablacla_new.xlsx`) | **DONE** |
+| Q3 | Borrar `cla_monthly_new_conservador.py` (95% copy-paste) | **DONE** |
+| Q4 | Mover `add_cumulative_returns()` a `utiles/polars_utils.py` | **DONE** |
+| Q5 | Limpiar código de debug en `fund_identifica.py` y `tablas.py` | **DONE** |
+| Q6 | Corregir firma `-> str` a `-> pl.DataFrame` en `fund_identifica.py` | **DONE** |
+| Q7 | Absorber `listas.py` en `merge.py` (inline `reduce(mul, ...)`) | **DONE** |
 
-## Mejoras medianas (1-4 horas cada una)
+### Mejoras medianas — COMPLETADOS (M4 descartado)
 
-| # | Mejora | Impacto | Esfuerzo | Archivos |
-|---|--------|---------|----------|----------|
-| M1 | ~~**Lazy-load de BCCh**~~ **DONE**: credenciales, cliente y tickers con `lru_cache`, login solo al primer uso | Alto | 1h | `eco/bcentral.py` |
-| M2 | ~~**Manejo de errores en Elmer**~~ **DONE**: retry con backoff exponencial, timeout, logging, reporte de categorías fallidas | Alto | 1.5h | `comparador/elmer.py` |
-| M3 | ~~**Validación en `download.py`**~~ **DONE**: valida tamaño post-descarga, retry explícito con backoff (5 intentos), elimina doble decorador, logging | Alto | 2h | `cartolas/download.py` |
-| M4 | **Eliminar mezcla Pandas/NumPy** — **DESCARTADO**: `bcentral.py` no tocable (Pandas viene de bcchapi), `tablas.py` sin cambios (NumPy correcto para semántica NaN en estadísticas por fila) | Medio | — | — |
-| M5 | ~~**Parametrizar fechas hardcodeadas**~~ **DONE**: fechas dinámicas con funciones de `utiles/fechas.py` | Medio | 1h | `tablas.py`, `resumen_apv.py` |
-| M6 | ~~**Email a `.env`**~~ **DONE**: config.py lee SENDER_MAIL, SENDER_NAME, TO_EMAILS desde `.env` con fallback | Bajo | 30 min | `cartolas/config.py` |
-| M7 | ~~**Consolidar `update.py` y `update_by_year.py`**~~ **DONE**: lógica unificada en `update.py` con `by_year` param, `update_by_year.py` es wrapper delgado | Medio | 2h | `cartolas/update.py`, `cartolas/update_by_year.py` |
+| # | Mejora | Estado |
+|---|--------|--------|
+| M1 | Lazy-load de BCCh con `lru_cache` | **DONE** |
+| M2 | Retry con backoff + logging en `elmer.py` | **DONE** |
+| M3 | Validación de descarga + retry simplificado en `download.py` | **DONE** |
+| M4 | Eliminar mezcla Pandas/NumPy | **DESCARTADO** (ver decisiones) |
+| M5 | Parametrizar fechas hardcodeadas en `tablas.py` y `resumen_apv.py` | **DONE** |
+| M6 | Email a `.env` en `config.py` | **DONE** |
+| M7 | Consolidar `update.py` y `update_by_year.py` | **DONE** |
 
----
-
-## Cambios estructurales (1+ días)
+### Cambios estructurales — PENDIENTES
 
 | # | Mejora | Impacto | Esfuerzo | Alcance |
 |---|--------|---------|----------|---------|
@@ -85,9 +55,27 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 
 ---
 
-## Orden sugerido de ejecución
+## Decisiones importantes
 
-1. **Primero los quick wins** Q1→Q3→Q4 (limpiar el ruido antes de tocar lógica)
-2. **Luego M1 + M2 + M3** (las fragilidades que pueden causar fallos en producción)
-3. **Después M4 + M7** (consistencia interna del pipeline)
-4. **Finalmente E1** (tests antes de hacer cambios estructurales mayores)
+### M4 revertido: NumPy correcto para semántica NaN
+
+`tablas.py:add_row_statistics()` usa `np.nanmean`/`np.nanmax`/`np.nanmin`/`np.isnan` para calcular estadísticas por fila ignorando NaN. Se intentó reemplazar con `pl.*_horizontal()` pero la semántica de NaN es diferente en Polars, produciendo una regresión funcional. NumPy se queda — su uso está justificado aquí. `bcentral.py` tampoco se tocó porque Pandas es dependencia de `bcchapi`, no nuestra.
+
+### filter_pivot_by_selected_dates retorna dict[str, pl.DataFrame]
+
+En enero, los períodos "1M" y "YTD" resuelven a la misma fecha (31 dic). Si se filtra con `is_in()` sobre una lista de fechas, el duplicado colapsa y se pierde un período. La función ahora retorna `{label: DataFrame}` para preservar todos los períodos sin contaminar el esquema con columnas extra (que romperían `calculate_relative_returns` y `add_row_statistics`, que asumen toda columna no-FECHA_INF es numérica).
+
+### update_by_year.py conservado como wrapper
+
+La lógica de update se consolidó en `update.py` con parámetro `by_year`. `update_by_year.py` se mantiene como wrapper delgado que llama `update_parquet(by_year=True)` para no romper callers externos (`cla_mensual.py`, `actualiza_parquet_year.py`).
+
+---
+
+## Orden sugerido para E1-E6
+
+1. **E1** — Tests antes de hacer cambios estructurales mayores
+2. **E4** — Logging (ya parcialmente hecho en M2 y M3)
+3. **E6** — Resolver imports circulares
+4. **E5** — `__init__.py` con exports
+5. **E3** — CLI unificado
+6. **E2** — Reportes livianos (requiere validación de negocio)
