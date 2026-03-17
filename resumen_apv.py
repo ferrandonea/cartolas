@@ -16,7 +16,9 @@ if __name__ == "__main__":
         "SERIE",
         "VALOR_CUOTA",
     )
-    df.collect().filter(pl.col("SERIE").is_in(["APV", "APV-FREE"])).sort("FECHA_INF").filter(pl.col("FECHA_INF") > date_n_years_ago(1)).write_csv("apv.csv")
-    
+    df_collected = df.collect()
+    max_date = df_collected.select(pl.col("FECHA_INF").max()).item()
+    df_collected.filter(pl.col("SERIE").is_in(["APV", "APV-FREE"])).sort("FECHA_INF").filter(pl.col("FECHA_INF") > date_n_years_ago(1, max_date)).write_csv("apv.csv")
+
     df_bcch = pl.read_parquet(BCCH_PARQUET)
-    df_bcch.select(pl.col(["FECHA_INF", "UF"])).filter(pl.col("FECHA_INF") > date_n_years_ago(1)).write_csv("uf.csv")
+    df_bcch.select(pl.col(["FECHA_INF", "UF"])).filter(pl.col("FECHA_INF") > date_n_years_ago(1, max_date)).write_csv("uf.csv")

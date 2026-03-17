@@ -63,9 +63,14 @@ def filter_pivot_by_selected_dates(pivot_df: pl.DataFrame):
         "YTD": ultimo_dia_año_anterior(max_date),
     }
 
-    selected_dates_list = list(selected_dates.values())
-    pivot_df = pivot_df.filter(pl.col("FECHA_INF").is_in(selected_dates_list))
-    return pivot_df
+    unique_dates = set(selected_dates.values())
+    filtered = pivot_df.filter(pl.col("FECHA_INF").is_in(list(unique_dates)))
+    rows = []
+    for label, d in selected_dates.items():
+        match = filtered.filter(pl.col("FECHA_INF") == d)
+        if match.height > 0:
+            rows.append(match.with_columns(pl.lit(label).alias("PERIODO")))
+    return pl.concat(rows)
 
 
 def calculate_relative_returns(pivot_df: pl.DataFrame) -> pl.DataFrame:
