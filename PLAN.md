@@ -66,7 +66,7 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 | M2 | ~~**Manejo de errores en Elmer**~~ **DONE**: retry con backoff exponencial, timeout, logging, reporte de categorías fallidas | Alto | 1.5h | `comparador/elmer.py` |
 | M3 | ~~**Validación en `download.py`**~~ **DONE**: valida tamaño post-descarga, retry explícito con backoff (5 intentos), elimina doble decorador, logging | Alto | 2h | `cartolas/download.py` |
 | M4 | **Eliminar mezcla Pandas/NumPy** — **DESCARTADO**: `bcentral.py` no tocable (Pandas viene de bcchapi), `tablas.py` sin cambios (NumPy correcto para semántica NaN en estadísticas por fila) | Medio | — | — |
-| M5 | **Parametrizar fechas hardcodeadas**: mover filtros de 2024 a `config.py` o calcularlos dinámicamente | Medio | 1h | `tablas.py`, `resumen_apv.py` |
+| M5 | ~~**Parametrizar fechas hardcodeadas**~~ **DONE**: fechas dinámicas con funciones de `utiles/fechas.py` | Medio | 1h | `tablas.py`, `resumen_apv.py` |
 | M6 | **Email a `.env`**: sacar `francisco@soyfocus.com` de `config.py` | Bajo | 30 min | `cartolas/config.py` |
 | M7 | **Consolidar `update.py` y `update_by_year.py`**: 80% de lógica duplicada, refactorizar a una función parametrizada | Medio | 2h | `cartolas/update.py`, `cartolas/update_by_year.py` |
 
