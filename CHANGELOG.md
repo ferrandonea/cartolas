@@ -6,7 +6,7 @@
 - Nuevo módulo `cartolas/captcha.py` reemplaza dependencia externa `captchapass`
 - Modelo OCR convertido de Keras a ONNX (`cartolas/modelo/ocr_model.onnx`)
 - Eliminada dependencia de TensorFlow y 80+ dependencias transitivas
-- Compatible con Python 3.12+ (antes solo 3.11.9+)
+- Compatible con Python 3.11+ (antes requería 3.11.9+, limitado por TensorFlow)
 
 ## 0.4.1
 ### Corregido
