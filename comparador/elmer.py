@@ -179,6 +179,7 @@ def save_elmer_data(
         lista_fondos (list): Lista de diccionarios con los datos de los fondos
         filename (str): Ruta donde guardar el archivo
     """
+    Path(filename).parent.mkdir(parents=True, exist_ok=True)
     with open(filename, "w") as f:
         json.dump(lista_fondos, f)
     logger.info("Archivo %s grabado", filename)
