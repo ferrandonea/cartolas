@@ -1,7 +1,6 @@
 from comparador.merge import merge_cartolas_with_categories
 import polars as pl
 from datetime import date
-import numpy as np
 from utiles.polars_utils import add_cumulative_returns
 
 
@@ -124,33 +123,13 @@ def add_row_statistics(relative_returns: pl.DataFrame) -> pl.DataFrame:
     if isinstance(relative_returns, pl.LazyFrame):
         relative_returns = relative_returns.collect()
 
-    # Obtener las columnas numéricas (excluyendo FECHA_INF)
     numeric_cols = [col for col in relative_returns.columns if col != "FECHA_INF"]
 
-    # Crear un nuevo DataFrame con solo las columnas numéricas
-    numeric_df = relative_returns.select(numeric_cols)
-
-    # Convertir a numpy para calcular estadísticas por fila
-    numeric_array = numeric_df.to_numpy()
-
-    # Calcular estadísticas por fila (ignorando NaN)
-    mean_values = np.nanmean(numeric_array, axis=1)
-    max_values = np.nanmax(numeric_array, axis=1)
-    min_values = np.nanmin(numeric_array, axis=1)
-
-    # Contar valores no nulos por fila
-    non_null_counts = np.sum(~np.isnan(numeric_array), axis=1)
-
-    # Agregar las estadísticas al DataFrame original
-    result_df = relative_returns.with_columns(
-        [
-            pl.Series("PROMEDIO_RENTABILIDAD", mean_values),
-            pl.Series("MAX_RENTABILIDAD", max_values),
-            pl.Series("MIN_RENTABILIDAD", min_values),
-            pl.Series("CANTIDAD_NO_NULOS", non_null_counts),
-        ]
+    return relative_returns.with_columns(
+        pl.mean_horizontal(numeric_cols).alias("PROMEDIO_RENTABILIDAD"),
+        pl.max_horizontal(numeric_cols).alias("MAX_RENTABILIDAD"),
+        pl.min_horizontal(numeric_cols).alias("MIN_RENTABILIDAD"),
+        pl.sum_horizontal(pl.col(c).is_not_null() for c in numeric_cols).alias("CANTIDAD_NO_NULOS"),
     )
-
-    return result_df
 
 
