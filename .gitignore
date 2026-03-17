@@ -192,3 +192,7 @@ rentabilidades_acumuladas.csv
 # Reportes CLA generados
 cla_mensual/
 cla_mensual2/
+
+# CSV de exportación
+apv.csv
+uf.csv
