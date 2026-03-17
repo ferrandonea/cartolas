@@ -30,7 +30,7 @@ JSON_PATH = BCCH_FOLDER / "bcentral_tickers.json"  # Metadatos de series tempora
 @lru_cache(maxsize=1)
 def _get_credentials():
     env_variables = dotenv_values(".env")
-    if "BCCH_USER" not in env_variables or "BCCH_PASS" not in env_variables:
+    if not env_variables.get("BCCH_USER", "").strip() or not env_variables.get("BCCH_PASS", "").strip():
         raise RuntimeError(
             "Faltan credenciales del Banco Central. "
             "Crea un archivo .env en la raíz del proyecto con BCCH_USER y BCCH_PASS."
