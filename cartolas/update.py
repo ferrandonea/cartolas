@@ -133,5 +133,8 @@ def _update_by_year(base_dir, min_date, max_date, sleep_time):
         logger.info("Archivos parquet actualizados, no hay cambios")
 
 
+from utiles.logging_config import setup_logging
+
 if __name__ == "__main__":
+    setup_logging()
     update_parquet()

@@ -272,7 +272,10 @@ def update_bcch_for_cartolas(path: str = PARQUET_PATH):
     return df
 
 
+from utiles.logging_config import setup_logging
+
 if __name__ == "__main__":
+    setup_logging()
     """
     Punto de entrada principal cuando se ejecuta el módulo directamente.
     Actualiza los datos del Banco Central y muestra los resultados.

@@ -566,7 +566,10 @@ def write_hoja_10_salida(writer, df_stats, sheet_name="10 Salida", categorias=No
     worksheet.set_column(1, len(periodos), 12)  # Columnas de períodos más estrechas
 
 
+from utiles.logging_config import setup_logging
+
 if __name__ == "__main__":
+    setup_logging()
     # Generar datos para el análisis CLA y guardar pasos intermedios en Excel
     df = generate_cla_data(
         save_xlsx=True,
