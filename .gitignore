@@ -189,5 +189,6 @@ cython_debug/
 .DS_Store
 rentabilidades_acumuladas.csv
 
-# Ignorar todo el contenido de cla_mensual
+# Reportes CLA generados
 cla_mensual/
+cla_mensual2/
