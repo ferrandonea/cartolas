@@ -351,8 +351,8 @@ python -c "from cartolas.download import get_cartola_from_cmf; print('OK')"
 ```
 
 ### Problemas con Captcha
-- El sistema usa `captchapass` para resolver captchas automáticamente
-- Si falla, verificar la librería esté actualizada
+- El sistema usa `cartolas.captcha` (ONNX Runtime) para resolver captchas automáticamente
+- El modelo ONNX está embebido en `cartolas/modelo/ocr_model.onnx`
 
 ### Datos Faltantes
 ```python

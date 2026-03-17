@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.5.0
+### Cambiado
+- Migración de captchapass (TensorFlow ~600MB) a ONNX Runtime (~70MB)
+- Nuevo módulo `cartolas/captcha.py` reemplaza dependencia externa `captchapass`
+- Modelo OCR convertido de Keras a ONNX (`cartolas/modelo/ocr_model.onnx`)
+- Eliminada dependencia de TensorFlow y 80+ dependencias transitivas
+- Compatible con Python 3.11+ (antes requería 3.11.9+, limitado por TensorFlow)
+
+## 0.4.1
+### Corregido
+- Descarga CMF: usa `evaluate()` en campos de fecha para evitar interferencia de datepicker
+- Descarga CMF: corrige patrón `expect_download` (acceso a `.value` fuera del `with`)
+- Descarga CMF: timeout dedicado de 60s para descargas (evita bloqueo de 8+ min en captchas fallidos)
+- Custom mapping CLA: actualiza NUM_CATEGORIA y usa Elmer como fuente de nombres
+- Filtro Elmer por retail en validación de custom_mapping
+
+### Mejorado
+- Calidad de código (CAL-01, CAL-02, CAL-05, CAL-08)
+- Fechas dinámicas y resiliencia en cálculos (BUG-01, RES-02, RES-03)
+- Seguridad en download, elmer, fund_identifica y config (SEG-02..05, RES-01, RES-05)
+- Decoradores y utilidades (RES-04, CAL-07, CAL-06)
+- Correcciones en bcentral (BUG-02, SEG-01)
+- Consolidación de lógica custom_mapping en cla_monthly, eliminación de archivos duplicados
+
+### Agregado
+- Documentación de auditorías de código y seguridad (`audits/`)
+- CLAUDE.md con referencia del proyecto para Claude Code
+
 ## 0.4.0
 ### Agregado
 - Documentación completa en español del proyecto (DOCUMENTACION.md)

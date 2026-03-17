@@ -1,7 +1,7 @@
 """Esto son modulos para bajar una cartola de la CMF"""
 
 from datetime import date, datetime
-from captchapass import predict
+from cartolas.captcha import predict
 from playwright.sync_api import Page, sync_playwright
 from pathlib import PurePosixPath
 from utiles.decorators import retry_function, exp_retry_function
