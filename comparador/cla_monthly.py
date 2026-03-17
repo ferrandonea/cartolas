@@ -30,6 +30,7 @@ from utiles.fechas import (
     ultimo_dia_mes_anterior,
 )
 from utiles.decorators import timer
+from utiles.polars_utils import add_cumulative_returns
 
 # Constantes para los períodos de análisis
 MESES_CLA = [1, 3, 6]  # Períodos mensuales a analizar (1, 3 y 6 meses)
@@ -102,37 +103,6 @@ def generate_cla_dates(input_date: date = date.today()) -> dict[int, date]:
     }
 
     return cla_dates
-
-
-@timer
-def add_cumulative_returns(df: pl.DataFrame) -> pl.DataFrame:
-    """
-    Calcula las rentabilidades acumuladas para cada fondo y serie.
-
-    Esta función procesa el DataFrame para calcular la rentabilidad acumulada
-    utilizando el producto acumulativo de las rentabilidades diarias.
-
-    Args:
-        df (pl.DataFrame): DataFrame con las rentabilidades diarias por fondo y serie
-
-    Returns:
-        pl.DataFrame: DataFrame original con una nueva columna 'RENTABILIDAD_ACUMULADA'
-            que contiene el producto acumulativo de las rentabilidades diarias
-    """
-    # Ordenar el DataFrame para asegurar el cálculo correcto de acumulados
-    sorted_df = df.sort(["RUN_FM", "SERIE", "FECHA_INF"])
-
-    # Calcular la rentabilidad acumulada por fondo y serie
-    return sorted_df.with_columns(
-        [
-            pl.col("RENTABILIDAD_DIARIA_PESOS")
-            .cum_prod()  # Producto acumulativo de rentabilidades diarias
-            .over(["RUN_FM", "SERIE"])  # Agrupado por fondo y serie
-            .fill_nan(1)  # Reemplazar NaN por 1 (rentabilidad neutral)
-            .fill_null(1)  # Reemplazar valores nulos por 1
-            .alias("RENTABILIDAD_ACUMULADA")
-        ]
-    )
 
 
 @timer

@@ -6,7 +6,8 @@ from cartolas.config import PARQUET_FOLDER_YEAR
 from cartolas.soyfocus import read_parquet_cartolas_lazy
 from comparador.elmer import last_elmer_data_as_polars
 from eco.bcentral import update_bcch_for_cartolas
-from utiles.listas import multiply_list
+from functools import reduce
+from operator import mul
 
 MAX_YEARS = 6
 MIN_DATE = date(2019, 1, 1)
@@ -37,7 +38,7 @@ COLUMNAS_FACTORES = ["FACTOR DE AJUSTE", "FACTOR DE REPARTO"]
 # Bajo el parquet de cartolas de todos los años de todos los fondos
 SUMA_GASTOS = sum([pl.col(x) for x in COLUMNAS_GASTOS])
 SUMA_COMISIONES = sum([pl.col(x) for x in COLUMNAS_COMISIONES])
-PRODUCTO_FACTORES = multiply_list([pl.col(x) for x in COLUMNAS_FACTORES])
+PRODUCTO_FACTORES = reduce(mul, [pl.col(x) for x in COLUMNAS_FACTORES])
 
 
 def prepare_cartolas_in_pesos(

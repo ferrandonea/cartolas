@@ -28,40 +28,6 @@ def get_fund_identification() -> str:
     return response.text
 
 
-def cmf_to_pl(cmf_text: str):
-    cmf_text = io.StringIO(cmf_text)
-    df = pl.read_csv(
-        cmf_text,
-        separator=";",
-        has_header=True,
-        new_columns=[
-            "RUN_ADM",
-            "NOMBRE_ADM",
-            "RUN_FM",
-            "NOMBRE_FM",
-            "NOMBRE_CORTO",
-            "FECHA_DEPOSITO",
-            "NUMERO_REGISTRO",
-            "TIPO_FONDO",
-            "FECHA_INICIO",
-            "FECHA_TERMINO",
-            "MONEDA",
-        ],
-    )
-
-    date_columns = ["FECHA_DEPOSITO", "FECHA_INICIO", "FECHA_TERMINO"]
-
-    df = df.with_columns(
-        [
-            pl.col(col)
-            .str.strptime(pl.Date, format="%d/%m/%Y", strict=False)
-            .alias(col)
-            for col in date_columns
-        ]
-    )
-    print(df.schema)
-
-
 def cmf_text_to_df(text: str) -> pl.DataFrame:
     """
     Convierte el texto de la identificación de fondos mutuos desde la CMF a un DataFrame de Polars
@@ -120,7 +86,7 @@ def cmf_text_to_df(text: str) -> pl.DataFrame:
     return df
 
 
-def download_fund_identification() -> str:
+def download_fund_identification() -> pl.DataFrame:
     """Descarga el texto de la identificación de fondos mutuos desde la CMF"""
     text_cmf = get_fund_identification()
     df = cmf_text_to_df(text_cmf)
@@ -155,32 +121,3 @@ def download_fund_identification() -> str:
     return df
 
 
-if __name__ == "__main__":
-    text_cmf = get_fund_identification()
-    print(text_cmf)
-    cmf_to_pl(text_cmf)
-    # print("Muestra del texto original:")
-    # print(text_cmf.split("\n")[0:3])
-
-    # df = cmf_text_to_df(text_cmf)
-    # print("\nDataFrame procesado:")
-    # print(df.head())
-
-    # print("\nTipos de datos:")
-    # print(df.schema)
-
-    # # Verificar que las fechas se procesaron correctamente
-    # print("\nEjemplo de fechas procesadas:")
-    # print(df.select(["NOMBRE_CORTO", "FECHA_DEPOSITO", "FECHA_INICIO"]).head())
-
-    # # Guardar el DataFrame
-    # df.write_csv("data/fondos_identificacion.csv")
-
-    # # Análisis básico
-    # print("\nNúmero de fondos por administradora:")
-    # print(
-    #     df.group_by("NOMBRE_ADM")
-    #     .agg(pl.count("RUN_FM").alias("NUM_FONDOS"))
-    #     .sort("NUM_FONDOS", descending=True)
-    #     .head(10)
-    # )

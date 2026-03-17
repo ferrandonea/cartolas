@@ -2,23 +2,7 @@ from comparador.merge import merge_cartolas_with_categories
 import polars as pl
 from datetime import date
 import numpy as np
-
-
-def add_cumulative_returns(df: pl.DataFrame):
-    # Ordenar el DataFrame por RUN_FM, SERIE y FECHA_INF
-    sorted_df = df.sort(["RUN_FM", "SERIE", "FECHA_INF"])
-
-    # Agrupar por RUN_FM y SERIE, y calcular la rentabilidad acumulada
-    return sorted_df.with_columns(
-        [
-            pl.col("RENTABILIDAD_DIARIA_PESOS")
-            .cum_prod()
-            .over(["RUN_FM", "SERIE"])
-            .fill_nan(1)
-            .fill_null(1)
-            .alias("RENTABILIDAD_ACUMULADA")
-        ]
-    )
+from utiles.polars_utils import add_cumulative_returns
 
 
 def create_returns_pivot_table(
@@ -170,29 +154,3 @@ def add_row_statistics(relative_returns: pl.DataFrame) -> pl.DataFrame:
     return result_df
 
 
-if __name__ == "__main__":
-    df = merge_cartolas_with_categories()
-    df = add_cumulative_returns(df)
-    df.collect().write_csv("rentabilidades_acumuladas.csv")
-    categoria = "BALANCEADO CONSERVADOR"
-    df = df.filter(pl.col("CATEGORIA") == categoria)
-
-    # Crear y mostrar la tabla pivotada
-    pivot_table = create_returns_pivot_table(df)
-
-    # Guardar los resultados - asegurarse de que son DataFrames regulares
-    if isinstance(df, pl.LazyFrame):
-        df = df.collect()
-    df.write_csv("rentabilidades_acumuladas_moderado.csv")
-    pivot_table.fill_null(1).fill_nan(1).write_csv("tabla_pivotada_rentabilidades.csv")
-    normalized_pivot_table = filter_pivot_by_selected_dates(pivot_table)
-    print(normalized_pivot_table)
-
-    # Calcular los retornos relativos
-    relative_returns = calculate_relative_returns(normalized_pivot_table)
-    print(relative_returns)
-
-    # Agregar estadísticas por fila
-    stats_df = add_row_statistics(relative_returns)
-    print(stats_df)
-    stats_df.write_csv("estadisticas_por_fila_conservador.csv")
