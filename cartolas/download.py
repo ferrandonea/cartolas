@@ -3,15 +3,14 @@
 from datetime import date, datetime
 from cartolas.captcha import predict
 from playwright.sync_api import Page, sync_playwright
-from utiles.decorators import retry_function, exp_retry_function
-from utiles.file_tools import clean_txt_folder
+from utiles.decorators import retry_function
+from utiles.file_tools import clean_txt_folder, MIN_FILE_SIZE
 from utiles.fechas import format_date_cmf, consecutive_date_ranges, date_range
 from typing import Any
 from pathlib import Path
 from .config import (
     DEFAULT_HEADLESS,
     URL_CARTOLAS,
-    VERBOSE,
     TIMEOUT,
     TEMP_FILE_PWD,
     ERROR_FOLDER,
@@ -19,6 +18,10 @@ from .config import (
     CARTOLAS_FOLDER,
 )
 from time import sleep
+import logging
+import time
+
+logger = logging.getLogger(__name__)
 
 
 @retry_function
@@ -26,38 +29,58 @@ def goto_with_retry(page: Page, url_str: str, timeout: int = TIMEOUT) -> Any:
     return page.goto(url_str, timeout=timeout)
 
 
-@exp_retry_function
-@retry_function
 def get_cartola_from_cmf(
     start_date: date | datetime,
     end_date: date | datetime,
     headless: bool = DEFAULT_HEADLESS,
     url: str = URL_CARTOLAS,
-    verbose: bool = VERBOSE,
     temp_file_path: Path = TEMP_FILE_PWD,
     error_folder: Path = ERROR_FOLDER,
     correct_folder: Path = CORRECT_FOLDER,
     cartolas_txt_folder: Path = CARTOLAS_FOLDER,
+    max_retries: int = 5,
 ):
     """Descarga cartolas desde la CMF en unas fechas determinadas"""
 
-    # Aplica la función de formato a las fechas de inicio y fin
     start_date, end_date = map(format_date_cmf, [start_date, end_date])
 
-    print(
-        f"Descargando cartolas desde {start_date} hasta {end_date}"
-    ) if verbose else None
+    for attempt in range(1, max_retries + 1):
+        try:
+            _do_cartola_download(
+                start_date, end_date, headless, url,
+                temp_file_path, error_folder, correct_folder,
+                cartolas_txt_folder,
+            )
+            return
+        except Exception as e:
+            logger.warning(
+                "Descarga %s→%s: intento %d/%d falló: %s",
+                start_date, end_date, attempt, max_retries, e,
+            )
+            if attempt < max_retries:
+                time.sleep(2 ** attempt)
+    raise RuntimeError(
+        f"Descarga {start_date}→{end_date} falló tras {max_retries} intentos"
+    )
+
+
+def _do_cartola_download(
+    start_date, end_date, headless, url,
+    temp_file_path, error_folder, correct_folder,
+    cartolas_txt_folder,
+):
+    """Ejecuta un intento de descarga de cartola desde la CMF."""
+
+    logger.info("Descargando cartolas desde %s hasta %s", start_date, end_date)
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=headless)
         page = browser.new_page()
 
-        # Alternativamente page.goto(url, timeout=TIMEOUT)
         goto_with_retry(page, url)
 
         captcha_img = page.query_selector("img#captcha_img")
         src = captcha_img.get_attribute("src")
-        # Acá usamos JS para obtener una representación de la imagen en bytes
         image_data = page.evaluate(
             """async (url) => {
             const response = await fetch(url);
@@ -71,19 +94,17 @@ def get_cartola_from_cmf(
 
         prediction = predict(temp_file_path)
 
-        print(f"Predicción del captcha: {prediction}") if verbose else None
+        logger.info("Predicción del captcha: %s", prediction)
 
         if len(prediction) != 6:
             temp_file_path.rename(error_folder / f"{prediction}.png")
             raise ValueError("El captcha no tiene 6 caracteres")
 
-        # Llenamos el formulario
         page.evaluate(f"document.querySelector('#txt_inicio').value = '{start_date}';")
         page.evaluate(f"document.querySelector('#txt_termino').value = '{end_date}';")
         page.get_by_label("Ingrese los caracteres de la").fill(prediction)
 
         fetch_cartola_data(
-            verbose,
             temp_file_path,
             error_folder,
             correct_folder,
@@ -94,7 +115,6 @@ def get_cartola_from_cmf(
 
 
 def fetch_cartola_data(
-    verbose,
     temp_file_path,
     error_folder,
     correct_folder,
@@ -108,16 +128,25 @@ def fetch_cartola_data(
             page.get_by_role("button", name="GENERAR ARCHIVO").click(timeout=TIMEOUT)
             download = download_info.value
             if download:
-                temp_file_path.rename(correct_folder / f"{prediction}.png")
                 download_path = cartolas_txt_folder / download.suggested_filename
                 download.save_as(download_path)
-                print(f"Archivo descargado como: {download_path}") if verbose else None
-                # ACA FALTA CHEQUEAR EL TAMAÑO
+                file_size = download_path.stat().st_size
+                if file_size < MIN_FILE_SIZE:
+                    logger.warning(
+                        "Archivo %s muy pequeño (%d bytes), descartando",
+                        download_path.name, file_size,
+                    )
+                    download_path.unlink()
+                    raise ValueError(
+                        f"Archivo descargado vacío o muy pequeño ({file_size} bytes)"
+                    )
+                temp_file_path.rename(correct_folder / f"{prediction}.png")
+                logger.info("Descargado: %s (%d bytes)", download_path.name, file_size)
     except Exception as e:
-        print("Error en la descarga") if verbose else None
-        print(f"Detalles: {e}") if verbose else None
-        temp_file_path.rename(error_folder / f"{prediction}.png")
-        raise e
+        logger.warning("Error en la descarga: %s", e)
+        if temp_file_path.exists():
+            temp_file_path.rename(error_folder / f"{prediction}.png")
+        raise
 
 
 def download_cartolas_range(input_date_range: list[date], sleep_time: int = 1):
@@ -129,12 +158,9 @@ def download_cartolas_range(input_date_range: list[date], sleep_time: int = 1):
     # Número de subconjuntos de rangos de fechas
     num_range_set = len(date_range_set)
 
-    # Recorro cada rango de fechas y bajo cartolas de la cmf
     for i, (start_date, end_date) in enumerate(date_range_set):
-        print(f"Descargando rango {i + 1} de {num_range_set}")
-        print(f"{start_date=}, {end_date=}")
-        get_cartola_from_cmf(start_date, end_date, verbose=True)
-        print(f"Esperando {sleep_time} segundos")
+        logger.info("Descargando rango %d de %d: %s → %s", i + 1, num_range_set, start_date, end_date)
+        get_cartola_from_cmf(start_date, end_date)
         sleep(sleep_time)
 
     # Limpia archivos txt que son más chicos que el mínimo definido en kb
