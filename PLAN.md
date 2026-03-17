@@ -71,6 +71,10 @@ Sistema de análisis financiero para **fondos mutuos chilenos**, orientado a los
 
 En enero, los períodos "1M" y "YTD" resuelven a la misma fecha (31 dic). Si se filtra con `is_in()` sobre una lista de fechas, el duplicado colapsa y se pierde un período. La función ahora retorna `{label: DataFrame}` para preservar todos los períodos sin contaminar el esquema con columnas extra (que romperían `calculate_relative_returns` y `add_row_statistics`, que asumen toda columna no-FECHA_INF es numérica).
 
+### E4: Logging centralizado con `utiles/logging_config.py`
+
+`setup_logging()` configura `logging.basicConfig` una vez al inicio. Nivel por defecto `INFO`, configurable vía `CARTOLAS_LOG_LEVEL`. Cada módulo usa `logger = logging.getLogger(__name__)`. Se migraron 36 `print()` a logging (WARNING para retries, ERROR para fallos, INFO para progreso, DEBUG para limpieza de archivos). Prints en bloques `__main__` se mantienen como `print()`. Los 9 scripts de entrada llaman `setup_logging()` en su `__main__`.
+
 ### update_by_year.py conservado como wrapper
 
 La lógica de update se consolidó en `update.py` con parámetro `by_year`. `update_by_year.py` se mantiene como wrapper delgado que llama `update_parquet(by_year=True)` para no romper callers externos (`cla_mensual.py`, `actualiza_parquet_year.py`).
