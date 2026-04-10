@@ -19,11 +19,16 @@ def read_parquet_cartolas_lazy(
         pl.LazyFrame: Un LazyFrame de Polars que representa los datos leídos.
     """
     # Verificar si la ruta existe
-    if not Path(parquet_path).exists():
+    path = Path(parquet_path)
+    if not path.exists():
         raise FileNotFoundError(f"La ruta {parquet_path} no existe")
 
+    # Si es un directorio, usar glob explícito para evitar leer archivos
+    # no-parquet (p. ej. .DS_Store en macOS).
+    scan_target = path / "*.parquet" if path.is_dir() else path
+
     # Escanear todos los archivos Parquet en la carpeta
-    lazy_df = pl.scan_parquet(parquet_path)
+    lazy_df = pl.scan_parquet(scan_target)
 
     # Ordenar el DataFrame si se especifica
     return (
