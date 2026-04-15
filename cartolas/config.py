@@ -120,3 +120,9 @@ SOYFOCUS_TAC_PARQUET_FILE_PATH = PARQUET_FOLDER / SOYFOCUS_TAC_FILE_NAME
 SENDER_MAIL = _env.get("SENDER_MAIL", "")
 SENDER_NAME = _env.get("SENDER_NAME", "")
 TO_EMAILS = [e.strip() for e in _env.get("TO_EMAILS", "").split(",") if e.strip()]
+
+# Credenciales Cloudflare R2
+R2_ENDPOINT_URL = _env.get("R2_ENDPOINT_URL", "")
+R2_BUCKET_NAME = _env.get("R2_BUCKET_NAME", "")
+R2_ACCESS_KEY_ID = _env.get("R2_ACCESS_KEY_ID", "")
+R2_SECRET_ACCESS_KEY = _env.get("R2_SECRET_ACCESS_KEY", "")
