@@ -1,7 +1,9 @@
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from cartolas import config
+from utiles.decorators import retry_function
 
 if TYPE_CHECKING:
     import boto3 as boto3_type
@@ -42,3 +44,44 @@ def get_r2_client():
         aws_secret_access_key=config.R2_SECRET_ACCESS_KEY,
         region_name="auto",
     )
+
+
+def upload_to_r2(path: Path) -> bool:
+    """Sube un archivo Parquet anual a Cloudflare R2 bajo el prefijo ``yearly/``.
+
+    Usa hasta 3 intentos con ``retry_function``. Si el cliente R2 no está
+    disponible o falla tras los reintentos, retorna ``False`` y emite un
+    warning; nunca lanza excepción.
+
+    Args:
+        path: Ruta local del archivo a subir.
+
+    Returns:
+        True si la subida fue exitosa, False en caso contrario.
+    """
+    client = get_r2_client()
+    if client is None:
+        logger.warning(
+            "No se puede subir '%s' a R2: cliente no disponible (faltan credenciales).",
+            path.name,
+        )
+        return False
+
+    key = f"yearly/{path.name}"
+
+    def _do_upload():
+        client.upload_file(str(path), config.R2_BUCKET_NAME, key)
+
+    _do_upload_with_retry = retry_function(_do_upload, max_attempts=3, delay=5)
+
+    try:
+        _do_upload_with_retry()
+        logger.info("Archivo subido a R2: %s", key)
+        return True
+    except Exception as e:
+        logger.warning(
+            "Fallo al subir '%s' a R2 tras 3 intentos: %s",
+            path.name,
+            e,
+        )
+        return False
