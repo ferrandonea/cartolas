@@ -46,7 +46,7 @@ def get_r2_client():
     )
 
 
-def sync_all_to_r2(base_dir: Path) -> None:
+def sync_all_to_r2(base_dir: Path) -> bool:
     """Sube todos los parquets anuales existentes en *base_dir* a Cloudflare R2.
 
     Itera todos los archivos ``cartolas_YYYY.parquet`` en *base_dir* y llama
@@ -54,10 +54,14 @@ def sync_all_to_r2(base_dir: Path) -> None:
     historial completo la primera vez.
 
     Si el cliente R2 no está disponible (faltan credenciales), emite un
-    warning y retorna sin error.
+    warning y retorna ``False`` sin lanzar excepción.
 
     Args:
         base_dir: Directorio que contiene los archivos ``cartolas_YYYY.parquet``.
+
+    Returns:
+        ``True`` si todos los archivos se subieron correctamente, ``False`` si
+        alguno falló o el cliente no estaba disponible.
     """
     client = get_r2_client()
     if client is None:
@@ -65,17 +69,28 @@ def sync_all_to_r2(base_dir: Path) -> None:
             "sync_all_to_r2: cliente R2 no disponible (faltan credenciales). "
             "Agrega las variables al .env para habilitar el backup a R2."
         )
-        return
+        return False
 
     parquets = sorted(base_dir.glob("cartolas_*.parquet"))
     if not parquets:
         logger.warning("sync_all_to_r2: no se encontraron archivos en '%s'.", base_dir)
-        return
+        return False
 
     key_prefix = base_dir.name
+    failed = []
     for path in parquets:
         logger.info("Subiendo a R2: %s …", path.name)
-        upload_to_r2(path, key_prefix=key_prefix)
+        if not upload_to_r2(path, key_prefix=key_prefix):
+            failed.append(path.name)
+
+    if failed:
+        logger.warning(
+            "sync_all_to_r2: %d archivo(s) no se pudieron subir: %s",
+            len(failed),
+            ", ".join(failed),
+        )
+        return False
+    return True
 
 
 def upload_to_r2(path: Path, key_prefix: str = "yearly") -> bool:

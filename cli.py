@@ -54,12 +54,14 @@ def sync_r2():
     Ejemplo:
       cartolas sync-r2
     """
+    import sys
     from pathlib import Path
 
     from cartolas.config import PARQUET_FOLDER_YEAR
     from cartolas.r2 import sync_all_to_r2
 
-    sync_all_to_r2(Path(PARQUET_FOLDER_YEAR))
+    if not sync_all_to_r2(Path(PARQUET_FOLDER_YEAR)):
+        sys.exit(1)
 
 
 @main.group()
