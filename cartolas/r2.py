@@ -63,6 +63,11 @@ def sync_all_to_r2(base_dir: Path) -> bool:
         ``True`` si todos los archivos se subieron correctamente, ``False`` si
         alguno falló o el cliente no estaba disponible.
     """
+    parquets = sorted(base_dir.glob("cartolas_*.parquet"))
+    if not parquets:
+        logger.info("sync_all_to_r2: no hay archivos en '%s', nada que sincronizar.", base_dir)
+        return True
+
     client = get_r2_client()
     if client is None:
         logger.warning(
@@ -70,11 +75,6 @@ def sync_all_to_r2(base_dir: Path) -> bool:
             "Agrega las variables al .env para habilitar el backup a R2."
         )
         return False
-
-    parquets = sorted(base_dir.glob("cartolas_*.parquet"))
-    if not parquets:
-        logger.info("sync_all_to_r2: no hay archivos en '%s', nada que sincronizar.", base_dir)
-        return True
 
     key_prefix = base_dir.name
     failed = []
