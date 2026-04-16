@@ -100,12 +100,18 @@ def download(year, year_from, year_to, download_all):
 
     dest = Path(PARQUET_FOLDER_YEAR)
 
+    selectors = sum([download_all, year is not None, year_from is not None or year_to is not None])
+    if selectors > 1:
+        raise click.UsageError("--all, --year y --from/--to son mutuamente excluyentes.")
+
     if download_all:
         if not download_all_from_r2(dest):
             sys.exit(1)
     elif year_from is not None or year_to is not None:
         if year_from is None or year_to is None:
             raise click.UsageError("Debes especificar tanto --from como --to para un rango.")
+        if year_from > year_to:
+            raise click.UsageError(f"--from ({year_from}) debe ser menor o igual a --to ({year_to}).")
         failed = False
         for y in range(year_from, year_to + 1):
             if not download_from_r2(y, dest):
