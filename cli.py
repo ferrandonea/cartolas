@@ -39,6 +39,29 @@ def update(monolithic):
     update_bcch_parquet()
 
 
+@main.command("sync-r2")
+def sync_r2():
+    """Sube todos los parquets anuales existentes a Cloudflare R2.
+
+    Recorre los archivos cartolas_YYYY.parquet en el directorio de datos
+    anuales y los sube a R2. Útil para la sincronización inicial o para
+    repoblar el bucket tras un backup.
+
+    Si las credenciales R2 no están configuradas en .env, emite un
+    aviso y termina sin error.
+
+    \b
+    Ejemplo:
+      cartolas sync-r2
+    """
+    from pathlib import Path
+
+    from cartolas.config import PARQUET_FOLDER_YEAR
+    from cartolas.r2 import sync_all_to_r2
+
+    sync_all_to_r2(Path(PARQUET_FOLDER_YEAR))
+
+
 @main.group()
 def report():
     """Genera reportes de análisis.
