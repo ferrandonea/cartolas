@@ -22,36 +22,12 @@ uv run ruff format .
 
 El proyecto analiza fondos mutuos chilenos descargando cartolas diarias desde la CMF, enriqueciéndolas con datos del Banco Central y El Mercurio Inversiones.
 
-### Estructura de paquetes
-
-```
-cartolas/       # Core: descarga, transformación, lectura y guardado de cartolas
-comparador/     # Análisis CLA mensual, merge con categorías El Mercurio
-eco/            # Integración con Banco Central (bcchapi)
-utiles/         # Decoradores (@retry, @timer), utilidades de fechas y archivos
-```
-
-### Flujo de datos
-
-1. **Descarga** (`cartolas/download.py`): Playwright + captchapass scraping de CMF → archivos TXT
-2. **Transformación** (`cartolas/transform.py`): TXT (CSV con `;`) → LazyFrame con esquema tipado
-3. **Guardado** (`cartolas/save.py`): LazyFrame → Parquet (dedup incluido)
-4. **Lectura** (`cartolas/read.py`): `pl.scan_parquet()` → LazyFrame
-5. **Análisis** (`comparador/`, `cartolas/soyfocus.py`): Joins, cálculos financieros → Excel/Parquet
-
 ### Paradigma
 
 - **Polars LazyFrames** en todo el pipeline. Se usa `pl.scan_parquet()` / `pl.scan_csv()` y se encadenan operaciones lazy. Solo se materializa con `.collect()` al final.
 - **Paradigma funcional**: funciones puras que reciben y retornan LazyFrames.
 - **Configuración centralizada** en `cartolas/config.py`: rutas, URLs, esquema de datos, constantes.
 
-## Integraciones externas
-
-| Fuente | Módulo | Método | Notas |
-|--------|--------|--------|-------|
-| CMF | `cartolas/download.py` | Playwright (scraping) | Captchas con `captchapass`, límite 30 días/descarga |
-| El Mercurio Inversiones | `comparador/elmer.py` | HTTP JSON API | Categorización de fondos, cacheo local en JSON |
-| Banco Central (BCCh) | `eco/bcentral.py` | `bcchapi` (API oficial) | UF, Dólar, Euro, Oro, TPM, UTM. Credenciales en `.env` |
 
 ## Patrones clave
 
@@ -76,3 +52,6 @@ utiles/         # Decoradores (@retry, @timer), utilidades de fechas y archivos
 - **Python**: >=3.11.9
 - **Sin tests formales** actualmente.
 - **Variables de entorno**: `.env` con credenciales de BCCh (`BCCH_USER`, `BCCH_PASS`) y SendGrid.
+
+# Commit
+Después de cada commit me tienes que decir su identificador

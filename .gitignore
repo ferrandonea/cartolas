@@ -196,3 +196,6 @@ cla_mensual2/
 # CSV de exportación
 apv.csv
 uf.csv
+
+# Archivos temporales
+TEMP_DATA.txt
