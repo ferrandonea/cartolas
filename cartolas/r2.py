@@ -73,8 +73,8 @@ def sync_all_to_r2(base_dir: Path) -> bool:
 
     parquets = sorted(base_dir.glob("cartolas_*.parquet"))
     if not parquets:
-        logger.warning("sync_all_to_r2: no se encontraron archivos en '%s'.", base_dir)
-        return False
+        logger.info("sync_all_to_r2: no hay archivos en '%s', nada que sincronizar.", base_dir)
+        return True
 
     key_prefix = base_dir.name
     failed = []
