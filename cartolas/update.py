@@ -102,6 +102,11 @@ def _update_single(parquet_file, min_date, max_date, sleep_time):
 def _update_by_year(base_dir, min_date, max_date, sleep_time):
     base_dir.mkdir(parents=True, exist_ok=True)
     years_range = range(min_date.year, max_date.year + 1)
+    try:
+        from cartolas.config import CURRENT_FOLDER
+        r2_key_prefix = str(base_dir.relative_to(CURRENT_FOLDER))
+    except ValueError:
+        r2_key_prefix = base_dir.name
 
     missing_dates_by_year = {}
     for year in years_range:
@@ -129,7 +134,7 @@ def _update_by_year(base_dir, min_date, max_date, sleep_time):
                 df = lazy_df_newdata
             logger.info(f"Grabando parquet para el año {year}")
             save_lazyframe_to_parquet(lazy_df=df, filename=year_file)
-            upload_to_r2(year_file)
+            upload_to_r2(year_file, key_prefix=r2_key_prefix)
         clean_txt_folder(folder=CARTOLAS_FOLDER, delete_all=True)
     else:
         logger.info("Archivos parquet actualizados, no hay cambios")

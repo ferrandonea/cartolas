@@ -46,8 +46,8 @@ def get_r2_client():
     )
 
 
-def upload_to_r2(path: Path) -> bool:
-    """Sube un archivo Parquet anual a Cloudflare R2 bajo el prefijo ``yearly/``.
+def upload_to_r2(path: Path, key_prefix: str = "yearly") -> bool:
+    """Sube un archivo Parquet anual a Cloudflare R2 bajo el prefijo indicado.
 
     Usa hasta 3 intentos con ``retry_function``. Si el cliente R2 no está
     disponible o falla tras los reintentos, retorna ``False`` y emite un
@@ -55,6 +55,9 @@ def upload_to_r2(path: Path) -> bool:
 
     Args:
         path: Ruta local del archivo a subir.
+        key_prefix: Prefijo del objeto en R2 (ej. ``"yearly"`` o
+            ``"custom/path"``). Se deriva del directorio base del dataset
+            para que distintos datasets no se sobreescriban entre sí.
 
     Returns:
         True si la subida fue exitosa, False en caso contrario.
@@ -67,7 +70,7 @@ def upload_to_r2(path: Path) -> bool:
         )
         return False
 
-    key = f"yearly/{path.name}"
+    key = f"{key_prefix}/{path.name}"
 
     def _do_upload():
         client.upload_file(str(path), config.R2_BUCKET_NAME, key)
