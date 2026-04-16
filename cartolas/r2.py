@@ -93,6 +93,106 @@ def sync_all_to_r2(base_dir: Path) -> bool:
     return True
 
 
+def download_from_r2(year: int, dest_dir: Path) -> bool:
+    """Descarga el parquet anual de un año específico desde Cloudflare R2.
+
+    Args:
+        year: Año a descargar (ej. 2024).
+        dest_dir: Directorio local donde guardar el archivo.
+
+    Returns:
+        True si la descarga fue exitosa, False si el cliente no está disponible
+        o el archivo no existe en R2.
+    """
+    client = get_r2_client()
+    if client is None:
+        logger.warning(
+            "download_from_r2: cliente R2 no disponible (faltan credenciales). "
+            "Agrega las variables al .env para habilitar la descarga desde R2."
+        )
+        return False
+
+    filename = f"cartolas_{year}.parquet"
+    key = f"yearly/{filename}"
+    dest_path = dest_dir / filename
+
+    try:
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        client.download_file(config.R2_BUCKET_NAME, key, str(dest_path))
+        logger.info("Archivo descargado desde R2: %s → %s", key, dest_path)
+        return True
+    except client.exceptions.ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code in ("404", "NoSuchKey"):
+            logger.warning("Archivo no encontrado en R2: %s", key)
+        else:
+            logger.warning("Error al descargar '%s' desde R2: %s", key, e)
+        return False
+    except Exception as e:
+        logger.warning("Error al descargar '%s' desde R2: %s", key, e)
+        return False
+
+
+def download_all_from_r2(dest_dir: Path) -> bool:
+    """Descarga todos los parquets anuales disponibles en R2 al directorio destino.
+
+    Lista los objetos bajo el prefijo ``yearly/`` en el bucket y descarga
+    cada uno con :func:`download_from_r2`.
+
+    Args:
+        dest_dir: Directorio local donde guardar los archivos.
+
+    Returns:
+        True si todos los archivos se descargaron correctamente, False si
+        alguno falló o el cliente no estaba disponible.
+    """
+    client = get_r2_client()
+    if client is None:
+        logger.warning(
+            "download_all_from_r2: cliente R2 no disponible (faltan credenciales). "
+            "Agrega las variables al .env para habilitar la descarga desde R2."
+        )
+        return False
+
+    prefix = "yearly/"
+    try:
+        paginator = client.get_paginator("list_objects_v2")
+        pages = paginator.paginate(Bucket=config.R2_BUCKET_NAME, Prefix=prefix)
+        keys = [
+            obj["Key"]
+            for page in pages
+            for obj in page.get("Contents", [])
+        ]
+    except Exception as e:
+        logger.warning("Error al listar objetos en R2 bajo '%s': %s", prefix, e)
+        return False
+
+    if not keys:
+        logger.info("download_all_from_r2: no se encontraron archivos en R2 bajo '%s'.", prefix)
+        return True
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    failed = []
+    for key in keys:
+        filename = key.split("/")[-1]
+        dest_path = dest_dir / filename
+        try:
+            client.download_file(config.R2_BUCKET_NAME, key, str(dest_path))
+            logger.info("Descargado desde R2: %s → %s", key, dest_path)
+        except Exception as e:
+            logger.warning("Error al descargar '%s' desde R2: %s", key, e)
+            failed.append(key)
+
+    if failed:
+        logger.warning(
+            "download_all_from_r2: %d archivo(s) no se pudieron descargar: %s",
+            len(failed),
+            ", ".join(failed),
+        )
+        return False
+    return True
+
+
 def upload_to_r2(path: Path, key_prefix: str = "yearly") -> bool:
     """Sube un archivo Parquet anual a Cloudflare R2 bajo el prefijo indicado.
 

@@ -65,6 +65,61 @@ def sync_r2():
 
 
 @main.group()
+def r2():
+    """Operaciones con Cloudflare R2.
+
+    \b
+    Comandos disponibles:
+      download   Descarga parquets anuales desde R2
+    """
+
+
+@r2.command()
+@click.option("--year", type=int, default=None, help="Año específico a descargar.")
+@click.option("--from", "year_from", type=int, default=None, help="Año inicial del rango.")
+@click.option("--to", "year_to", type=int, default=None, help="Año final del rango (inclusivo).")
+@click.option("--all", "download_all", is_flag=True, help="Descargar todos los disponibles en R2.")
+def download(year, year_from, year_to, download_all):
+    """Descarga parquets anuales desde Cloudflare R2.
+
+    Usa --year para un año concreto, --from/--to para un rango,
+    o --all para descargar todo lo disponible. El destino por defecto
+    es el directorio de parquets anuales (PARQUET_FOLDER_YEAR).
+
+    \b
+    Ejemplos:
+      cartolas r2 download --year 2024
+      cartolas r2 download --from 2020 --to 2024
+      cartolas r2 download --all
+    """
+    import sys
+    from pathlib import Path
+
+    from cartolas.config import PARQUET_FOLDER_YEAR
+    from cartolas.r2 import download_all_from_r2, download_from_r2
+
+    dest = Path(PARQUET_FOLDER_YEAR)
+
+    if download_all:
+        if not download_all_from_r2(dest):
+            sys.exit(1)
+    elif year_from is not None or year_to is not None:
+        if year_from is None or year_to is None:
+            raise click.UsageError("Debes especificar tanto --from como --to para un rango.")
+        failed = False
+        for y in range(year_from, year_to + 1):
+            if not download_from_r2(y, dest):
+                failed = True
+        if failed:
+            sys.exit(1)
+    elif year is not None:
+        if not download_from_r2(year, dest):
+            sys.exit(1)
+    else:
+        raise click.UsageError("Especifica --year, --from/--to o --all.")
+
+
+@main.group()
 def report():
     """Genera reportes de análisis.
 
