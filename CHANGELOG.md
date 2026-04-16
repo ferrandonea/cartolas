@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.7.0] — 2026-04-15
+
+### Added
+- **Backup automático a Cloudflare R2**: cada vez que se actualiza un parquet anual en disco, se sube automáticamente a R2 bajo el prefijo `yearly/`
+- **`cartolas/r2.py`**: módulo con `get_r2_client()`, `upload_to_r2()`, `sync_all_to_r2()`, `download_from_r2()`, `download_all_from_r2()`
+- **`cartolas sync-r2`**: comando CLI para sincronización inicial del historial completo a R2
+- **`cartolas r2 download`**: comando CLI con selectores `--year`, `--from/--to`, `--all` para recuperar parquets desde R2
+- **Tests unitarios para `cartolas/r2.py`**: mocks boto3, cubre upload, sync, download y manejo de credenciales faltantes
+- Retry automático (3 intentos) en uploads a R2 usando `@retry_function`
+- Warning visible si credenciales R2 no están configuradas; el pipeline continúa sin interrupciones
+- Credenciales R2 gestionadas en `.env`: `R2_ENDPOINT_URL`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
+
+### Changed
+- `cartolas/update.py`: `_update_by_year` llama a `upload_to_r2()` tras cada escritura exitosa a disco
+- `cartolas/config.py`: carga variables de entorno R2 con el mismo patrón que credenciales BCCh
+
+### Dependencies
+- Agregada `boto3` (cliente S3-compatible para Cloudflare R2)
+
+PRD #1
+
 ## 0.6.0
 ### Agregado
 - **CLI unificado con Click** (E3): nuevo `cli.py` con entry point `cartolas` registrado en `pyproject.toml`
