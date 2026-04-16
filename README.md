@@ -50,6 +50,26 @@ cartolas report apv
 cartolas report apv --output mi_apv.csv
 ```
 
+## Backup a Cloudflare R2
+
+`cartolas update` sube automáticamente el parquet del año actual a R2 tras cada actualización. Para sincronizar el historial completo por primera vez:
+
+```bash
+# Sube todos los parquets anuales existentes a R2
+cartolas sync-r2
+
+# Descarga un año específico desde R2
+cartolas r2 download --year 2023
+
+# Descarga un rango de años
+cartolas r2 download --from 2020 --to 2025
+
+# Descarga todo el historial disponible en R2
+cartolas r2 download --all
+```
+
+Requiere configurar las credenciales R2 en `.env` (ver Variables de entorno). Si no están configuradas, el pipeline continúa normalmente sin subir a R2.
+
 ## Variables de entorno
 
 | Variable | Descripción | Requerida |
@@ -57,6 +77,10 @@ cartolas report apv --output mi_apv.csv
 | `BCCH_USER` | Email registrado en API Banco Central | Sí |
 | `BCCH_PASS` | Contraseña API Banco Central | Sí |
 | `CARTOLAS_LOG_LEVEL` | Nivel de logging (`DEBUG`, `INFO`, `WARNING`, `ERROR`). Default: `INFO` | No |
+| `R2_ENDPOINT_URL` | Endpoint R2 (`https://<account_id>.r2.cloudflarestorage.com`) | Solo R2 |
+| `R2_BUCKET_NAME` | Nombre del bucket R2 | Solo R2 |
+| `R2_ACCESS_KEY_ID` | Access Key ID de R2 | Solo R2 |
+| `R2_SECRET_ACCESS_KEY` | Secret Access Key de R2 | Solo R2 |
 
 ## Estructura del proyecto
 
