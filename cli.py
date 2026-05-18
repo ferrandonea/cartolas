@@ -140,15 +140,22 @@ def report():
 @report.command()
 @click.option("--output", type=click.Path(), default=None, help="Ruta del archivo Excel.")
 @click.option("--no-update", is_flag=True, help="Saltar actualización de datos antes de generar.")
-def cla(output, no_update):
+@click.option(
+    "--v1",
+    is_flag=True,
+    help="Usa mapping default de Elmer (9810 contra BALANCEADO CONSERVADOR).",
+)
+def cla(output, no_update, v1):
     """Genera reporte CLA mensual (Excel).
 
-    Por defecto actualiza datos (by-year + BCCh) antes de generar.
-    El archivo se guarda en cla_mensual/cla_YYYYMMDD.xlsx.
+    Por defecto usa mapping custom: compara RUN 9810 (Conservador) contra
+    DEUDA CORTO PLAZO NACIONAL (cat 17) y guarda en cla_mensual2/cla2_YYYYMMDD.xlsx.
+    Usa --v1 para el mapping default de Elmer.
 
     \b
     Ejemplos:
-      cartolas report cla                       # actualiza + genera
+      cartolas report cla                       # v2 (default): mapping custom
+      cartolas report cla --v1                  # v1: mapping default de Elmer
       cartolas report cla --no-update           # solo genera
       cartolas report cla --output marzo.xlsx   # ruta personalizada
     """
@@ -170,13 +177,20 @@ def cla(output, no_update):
 
     report_date = ultimo_dia_mes_anterior(date.today())
     if output is None:
-        output = Path("cla_mensual") / f"cla_{report_date.strftime('%Y%m%d')}.xlsx"
+        folder = Path("cla_mensual") if v1 else Path("cla_mensual2")
+        prefix = "cla" if v1 else "cla2"
+        output = folder / f"{prefix}_{report_date.strftime('%Y%m%d')}.xlsx"
     else:
         output = Path(output)
 
+    custom_mapping = None if v1 else {9810: 17}
+    if not v1:
+        logger.info("Modo v2 (default): mapping custom {9810: 17}")
     logger.info(f"Reporte CLA: {output}")
     output.parent.mkdir(parents=True, exist_ok=True)
-    generate_cla_data(save_xlsx=True, xlsx_name=output)
+    generate_cla_data(
+        save_xlsx=True, xlsx_name=output, custom_mapping=custom_mapping
+    )
 
 
 @report.command()
