@@ -85,11 +85,17 @@ def _do_cartola_download(
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=headless)
-        page = browser.new_page()
+        # La CMF responde 500 si el user-agent contiene "HeadlessChrome"
+        default_ua = browser.new_page().evaluate("navigator.userAgent")
+        page = browser.new_page(
+            user_agent=default_ua.replace("HeadlessChrome", "Chrome")
+        )
 
         goto_with_retry(page, url)
 
         captcha_img = page.query_selector("img#captcha_img")
+        if captcha_img is None:
+            raise RuntimeError(f"No se encontró img#captcha_img en {page.url}")
         src = captcha_img.get_attribute("src")
         image_data = page.evaluate(
             """async (url) => {
