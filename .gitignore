@@ -199,3 +199,9 @@ uf.csv
 
 # Archivos temporales
 TEMP_DATA.txt
+
+# Reportes Excel generados
+cartolas/data/excel/
+
+# CSV exportado por ejercicios/valor_cuota_vivienda.py
+valor_cuota_vivienda.csv
