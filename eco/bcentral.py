@@ -234,14 +234,18 @@ def update_bcch_parquet(path: str = PARQUET_PATH) -> pl.LazyFrame:
     # Compara la fecha más reciente con la fecha hasta la cual queremos datos
     if last_date >= LAST_DATE.date() and df is not None:
         # Si ya tenemos datos actualizados, no hacemos nada
-        logger.info("No hay datos nuevos del BCCh")
+        logger.info(f"BCCh al día (última fecha: {last_date})")
         return df
     else:
         # Si necesitamos datos más recientes, descargamos y guardamos
-        logger.info(f"Última fecha en el archivo: {last_date}")
-        logger.info("Actualizando datos del BCCh")
+        logger.info(
+            f"BCCh desactualizado: archivo hasta {last_date}, "
+            f"objetivo {LAST_DATE.date()}. Descargando..."
+        )
         df = baja_bcch_as_polars(as_lazy=True)
         df.collect().write_parquet(path)
+        new_last_date = get_last_date_from_parquet(df)
+        logger.info(f"BCCh actualizado: {last_date} → {new_last_date}")
     return df
 
 
